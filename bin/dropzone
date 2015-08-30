@@ -1,0 +1,487 @@
+#!/usr/bin/env ruby
+
+require 'rubygems'
+require 'commander/import'
+require 'socksify'
+
+$: << [File.dirname(__FILE__),'..','lib'].join('/')
+require 'dropzone_ruby'
+require 'dropzone/command'
+
+# For the examples:
+RANDOM_TXID = '0e3e2357e806b6cdb1f70b54c3a3a17b6714ee1f0e68bebb44a74b1efd512098'
+
+# Cleans up a multiline string, keeps this file readable.
+def multi(string)
+  string.tr("\t\r\n",'').gsub(/[ ]{2,}/, ' ')
+end
+
+def command_show(type, &block)
+  command '%s show' % type do |c|
+    c.when_called DropZoneCommand, ('%s_show' % type).to_sym
+
+    c.syntax, c.summary, c.description = 
+      'dropzone %s show <txid> [options]' % type,
+      'Show %s details' % type
+      multi(<<-eos) % type
+      Displays the information associated with the %s at the specified address.
+      eos
+    block.call c
+  end
+end
+
+# Defaults:
+Dropzone::BitcoinConnection.cache = LocalConnectionCache.new
+Bitcoin.network = :bitcoin
+
+program :version, '0.0.1'
+program :description, 'A marketplace built on The Blockchain.'
+
+program :help, 'Author', 
+  'Miracle Max (17Q4MX2hmktmpuUKHFuoRmS5MfB5XPbhod / mw8Ge8HDBStKyn8u4LTkUwueheFNhuo7Ch ) '
+
+global_option('--debug', 'Display detailed data on program activity') do 
+  Socksify::debug = true
+  RestClient.log = Logger.new STDOUT
+end
+
+global_option('--socks_server SERVER:PORT', 
+  'Route all connections through the specified SOCKS server & port') do |server_spec|
+  server, port = $1, $2 if /\A([a-z\.\d]+)(?:\:([\d]+)|)\Z/i.match server_spec
+  
+  raise OptionParser::InvalidArgument, "socks_server" unless server
+
+  TCPSocket::socks_server = server if server
+  TCPSocket::socks_port = (port) ? port : 9050
+end
+
+global_option('--force_testnet', 
+  'Force transactions that would normally be on mainnet, onto testnet') do 
+  Bitcoin.network  = :testnet3
+end
+
+global_option('--tip SATOSHIS', 
+  'Set the transaction tip amount. Defaults to 20000') do |satoshis|
+  satoshis_i = $1.to_i if /\A([\d]+)\Z/.match satoshis
+  
+  raise OptionParser::InvalidArgument, "tip" unless satoshis_i
+
+  Dropzone::MessageBase.default_tip = satoshis_i
+end
+
+command 'balance' do |c|
+  c.when_called DropZoneCommand, :balance
+
+  c.syntax, c.summary, c.description = 
+    'dropzone balance <addr>',
+    'Display the balance on the provided address, in Bitcoin',
+    multi(<<-eos)
+      Given the provided public key, display the Bitcoin balance remaining in
+      this account. Does not include unconfirmed transactions.
+      eos
+  
+  c.example 'Show the balance of Miracle Max\'s Account', 
+    'dropzone balance 17Q4MX2hmktmpuUKHFuoRmS5MfB5XPbhod'
+end
+
+command 'pay' do |c|
+  c.when_called DropZoneCommand, :send_value
+
+  c.syntax, c.summary, c.description = 
+    'dropzone pay <private_key> <dest_addr> <amnt_btc> [options]',
+    'Send value to a recipient, in Bitcoin',
+    multi(<<-eos)
+      Given the provided <private_key>, send Bitcoin in units of BTC <amnt_btc>
+      to the recipient specified by <dest_addr>.
+      eos
+  c.example 'Send 1.2 Bitcoin from %s to %s' % [ 
+    'mi37WkBomHJpUghCn7Vgh3ah33h6L9Nkqw', 'mqVRfjepJTxxoDgDt892tCybhmjfKCFNyp'], 
+    multi(<<-eos)
+    dropzone pay 92UvdTpmxA6cvD6YeJZSiHW8ff8DsZXL2PHZu9Mg7JY3zbaETJw
+      mqVRfjepJTxxoDgDt892tCybhmjfKCFNyp
+      1.2
+    eos
+end
+
+command 'listing find' do |c|
+  c.when_called DropZoneCommand, :listing_find
+
+  c.syntax, c.summary, c.description = 
+    'dropzone listing find <block_depth>',
+    'Searches through The Blockchain for listings',
+    multi(<<-eos)
+      Search through The Blockchain, up until the provided <block_depth>, 
+      for Drop Zone listings. Note that the returned listings may not be entirely
+      updated, or even valid. A subsequent 'listing show' command should be
+      specified to validate the details of the item you're interested in.
+      eos
+  
+  c.example 'Find listings uploaded (approximately) in the last hour', 
+    'dropzone listing find 6'
+
+  c.example 'Find listings uploaded Twenty Kilometers around Shijuku in the last day', 
+    multi(<<-eos)
+    dropzone listing find 144 
+    --latitude 35.689487
+    --longitude 139.691706
+    --radius 20000
+    eos
+
+  c.example 'Find listings between block 371813 and 371810 (inclusive)', 
+    'dropzone listing find 3 --start_at 371813'
+
+  c.example 'Find listings in block 371812', 
+    'dropzone listing find 0 --start_at 371812'
+
+  c.option '--latitude LAT ', Float, 
+    'The approximate latitude of your location.'
+  c.option '--longitude LON ', Float, 
+    'The approximate longitude of your location.'
+  c.option '--radius METERS ', Integer, multi(<<-eos)
+    The approximate diameter you wish to search around the provided 
+    latitude and longitude. The expected unit of distance is in meters.
+    eos
+
+  c.option '--start_at BLOCKHEIGHT ', Integer, multi(<<-eos)
+    Start searching from the specified block height until <block_depth> 
+    'blocks down'. The default behavior is to start at the current blockchain 
+    height.
+    eos
+end
+
+command_show(:listing) do |c|
+  c.example "Display a seller's listing", 
+    'dropzone listing show 6a9013b8684862e9ccfb527bf8f5ea5eb213e77e3970ff2cd8bbc22beb7cebfb'
+end
+
+def listing_create_update_options(cmd)
+  cmd.option '--description DESC', String, multi(<<-eos)
+    A detailed description of the item that's being listed. Hashtags are 
+    encouraged as they will be easily searched and indexed, and take up a 
+    small amount of space
+    eos
+  cmd.option '--price_currency ISOCODE', String, multi(<<-eos)
+    A three or four digit currency identifier. Common values would include 
+    'BTC' or 'USD', though any identifier can be specified
+    eos
+  cmd.option '--price_in_units PRICE ', Integer, 
+    'The price of the specified item denominated in cents, or satoshis, etc.'
+  cmd.option '--expiration_in NBLOCKS ', Integer, multi(<<-eos)
+    The expiration time of the item. "Times" are to be indicated in the number 
+    of blocks that this listing is available for. Omitting this field indicates 
+    no expiration. Note that clients will likely override the seller's 
+    preference to list an item for a very long time by restricting the block 
+    depth of users' searches.
+    eos
+end
+
+command 'listing update' do |c|
+  c.when_called DropZoneCommand, :listing_update
+
+  c.syntax, c.summary, c.description = 
+    'dropzone listing update <private_key> <txid> [options]',
+    'Update your item listing',
+    multi(<<-eos)
+      Given the provided item transaction id <txid> on your account <private_key>, 
+      update the specified item attributes. Note that some attributes such as
+      latitude, longitude, and radius cannot be updated.
+      eos
+  
+  c.example 'Update existing item', multi(<<-eos) % RANDOM_TXID
+    dropzone listing update 
+      --description "Second Description"
+      92thgQGx77ihBaA56W7B1Qm8nhYHRERo1UqrgT2p6P6QTqkRhRB
+      %s
+    eos
+
+  listing_create_update_options c
+end
+
+command 'listing create' do |c|
+  c.when_called DropZoneCommand, :listing_create
+
+  c.syntax, c.summary, c.description = 
+    'dropzone listing create <private_key> [options]',
+    'Create an item listing as a seller',
+    multi(<<-eos)
+      Given the provided seller address <private_key>, create an item
+      which is pubilicly listed as available for purchase by other users
+      eos
+
+  c.example 'Create an Item', multi(<<-eos)
+    dropzone listing create 
+      --latitude "51.500782"
+      --longitude "-0.124669"
+      --radius 1000
+      --price_currency 'USD'
+      --price_in_units 100
+      --description "Test Description"
+      92thgQGx77ihBaA56W7B1Qm8nhYHRERo1UqrgT2p6P6QTqkRhRB
+    eos
+
+  listing_create_update_options c
+
+  c.option '--latitude LAT ', Float, 
+    "(Required) The approximate latitude your listing's location."
+  c.option '--longitude LON ', Float, 
+    "(Required) The approximate longitude your listing's location."
+  c.option '--radius METERS ', Integer, multi(<<-eos)
+    (Required) The approximate diameter your item's location around the provided 
+    latitude and longitude. The expected unit of distance is in meters.
+    eos
+end
+
+command 'profile seller show' do |c|
+  c.when_called DropZoneCommand, :profile_seller_show
+
+  c.syntax, c.summary, c.description = 
+    'dropzone profile seller show <addr> [options]',
+    "Show a seller's profile",
+    'Displays the information associated with the seller at the given address.'
+
+  c.example "Look up a user's store profile", 
+    'dropzone profile seller show "17Q4MX2hmktmpuUKHFuoRmS5MfB5XPbhod"'
+end
+
+command 'profile seller create' do |c|
+  c.when_called DropZoneCommand, :profile_seller_create
+
+  c.syntax, c.summary, c.description = 
+    'dropzone profile seller create <private_key> [options]',
+    'Open for business, and/or update your existing store',
+     multi(<<-eos)
+      A seller profile is required to precede all item
+      declarations on a public key (Specified in <private_key>). This 
+      declaration is expected to contain basic information about a seller, and 
+      offers some provisions which facilitate identity transfers. This command 
+      will create an identity if one does not exist at the specified address, 
+      and/or will update any identity that already exists at the specified 
+      address.
+      eos
+
+  c.example 'Declare a seller profile:', multi(<<-eos)
+    dropzone profile seller create --alias="Miracle Max" 
+      --description="First Seller on DropZone" 
+      --communications_pkey="mi37WkBomHJpUghCn7Vgh3ah33h6L9Nkqw" 
+      "92thgQGx77ihBaA56W7B1Qm8nhYHRERo1UqrgT2p6P6QTqkRhRB"
+    eos
+
+  c.option '--description DESC', String, 'A description of yourself'
+  c.option '--alias ALIAS', String, 
+    'A short name by which you would like to be identified'
+  c.option '--communications_pkey ADDR', String, 
+    'Specifies which testnet address you wish to receive communications inquiries at.'
+  c.option '--transfer_pkey ADDR', String, multi(<<-eos)
+    Transfer this identity to the specified address. Note that this is a
+    one-way operation, and that you should be sure to control the destination
+    key. If you wish to deactivate your store entirely, a 0 can be passed
+    here.
+    eos
+end
+
+command 'profile buyer show' do |c|
+  c.when_called DropZoneCommand, :profile_buyer_show
+
+  c.syntax, c.summary, c.description = 
+    'dropzone profile buyer show <addr> [options]',
+    "Show a buyer's profile",
+    'Displays the information associated with the buyer at the given address.'
+
+  c.example "Look up a user's buy profile", 
+    'dropzone --force_testnet profile buyer show "mgDprFdTS61x1ejowYqJSmoWiqwpEiGrcy"'
+end
+
+command 'profile buyer create' do |c|
+  c.when_called DropZoneCommand, :profile_buyer_create
+
+  c.syntax, c.summary, c.description = 
+    'dropzone profile buyer create <private_key> [options]',
+    'Create/Update your buyer profile (optional)',
+    multi(<<-eos)
+      A buyer profile is an optional declaration that can be
+      attached to an address (<private_key>) for the purpose of adding metadata 
+      to your identity as a buyer. This command will create a profile on the 
+      specified address, or update the existing profile on the specified address.
+      eos
+
+  c.example 'Declare a buyer profile:', multi(<<-eos)
+    dropzone profile buyer create --alias="Miracle Max" 
+    --description="First Buyer on DropZone" 
+    "92UvdTpmxA6cvD6YeJZSiHW8ff8DsZXL2PHZu9Mg7JY3zbaETJw"
+    eos
+  c.option '--description DESC', String, 'A description of yourself'
+  c.option '--alias ALIAS', String, 
+    'A short name by which you would like to be identified'
+  c.option '--transfer_pkey ADDR', String, multi(<<-eos)
+    Transfer this identity to the specified address. Note that this is a
+    one-way operation, and that you should be sure to control the destination
+    key. If you wish to deactivate your store entirely, a 0 can be passed
+    here.
+    eos
+end
+
+command_show(:invoice) do |c|
+  c.example "Display a seller's invoice", 
+    'dropzone invoice show %s' % RANDOM_TXID
+end
+
+command 'invoice create' do |c|
+  c.when_called DropZoneCommand, :invoice_create
+
+  c.syntax, c.summary, c.description = 
+    'dropzone invoice create <private_key> <recipient_addr> [options]',
+    'Create an invoice to a potential buyer',
+    multi(<<-eos)
+      An invoice is needed to lock in currency exchange rates for the purposes
+      of a sale, and for the purpose of allowing the network to identify a 
+      successful sale on your profile <private_key>. Satisfied invoices build 
+      reputation. This command will generate an invoice to the buyer at the 
+      specified address <recipient_addr>.
+      eos
+
+  c.example 'Create an invoice:', multi(<<-eos)
+    dropzone invoice create 
+      --amount_due 50000000
+      --expiration_in 6
+      92thgQGx77ihBaA56W7B1Qm8nhYHRERo1UqrgT2p6P6QTqkRhRB
+      mi37WkBomHJpUghCn7Vgh3ah33h6L9Nkqw
+    eos
+
+  c.option '--amount_due BTC', String, 
+    'Amount due, denominated in Bitcoin (ie "0.5")'
+  c.option '--expiration_in NBLOCKS ', Integer, multi(<<-eos)
+    The expiration time of the invoice. "Times" are to be indicated in the number 
+    of blocks that this listing is available for. Omitting this field indicates 
+    no expiration. Specifying an expiration is useful for locking in an exchange
+    rate when closing a sale. 
+    eos
+end
+
+command_show(:review) do |c|
+  c.example "Display a buyer's review", 
+    'dropzone review show  %s' % RANDOM_TXID
+end
+
+command 'review create' do |c|
+  c.when_called DropZoneCommand, :review_create
+
+  c.syntax, c.summary, c.description = 
+    'dropzone review create <private_key> <txid> [options]',
+    'Leave a review on a generated invoice',
+    multi(<<-eos)
+      A review is primarily designed for the purposes of establishing
+      feedback and reputations amongst buyers and sellers. After an invoice
+      is generated, and value is sent, a review indicates to the network
+      the nature of the transaction, and a buyer's <privkey> experience with 
+      the seller. Reviews are left in response to a specific invoice at the 
+      provided
+      <txid>.
+      eos
+
+  c.example 'Review a purchase:', multi(<<-eos) % [RANDOM_TXID]
+    dropzone review create 
+      --description: 'Fair exchange"
+      --delivery_quality 8, 
+      --product_quality 8
+      --communications_quality 4
+      92UvdTpmxA6cvD6YeJZSiHW8ff8DsZXL2PHZu9Mg7JY3zbaETJw
+      %s
+    eos
+  c.option '--description DESC', String, 
+    'A description of the transaction and/or a review of the product.'
+
+  c.option '--delivery_quality N', Integer, 
+    'The quality of the delivery itself. Between 0 (worst) to 8 (best)'
+
+  c.option '--product_quality N', Integer, 
+    'The quality of the product.  Between 0 (worst) to 8 (best)'
+
+  c.option '--communications_quality N', Integer, 
+    "The seller's communications skill. Between 0 (worst) to 8 (best)"
+end
+
+command 'communication list' do |c|
+  c.when_called DropZoneCommand, :communication_list
+
+  c.syntax, c.summary, c.description = 
+    'dropzone communication list <private_key>',
+    'Show all the available communication channels for the given testnet address',
+    multi(<<-eos)
+      This command lists all the conversations that have been initiated and/or
+      authenticated on the testnet address correlated with the specified
+      <private_key>.
+      eos
+
+  c.example 'List all communication sessions for a testnet address:', 
+    multi(<<-eos)
+    dropzone communication list
+      92UvdTpmxA6cvD6YeJZSiHW8ff8DsZXL2PHZu9Mg7JY3zbaETJw
+    eos
+end
+
+command 'communication show' do |c|
+  c.when_called DropZoneCommand, :communication_show
+
+  c.syntax, c.summary, c.description = 
+    'dropzone communication show <private_key> <tx_id>',
+    'Show all the available communication channels for the given testnet address',
+    multi(<<-eos)
+      Output a full conversation, start to finish, between the testnet 
+      <private_key> starting with the initiation at <tx_id>.
+      eos
+
+  c.example 'Show the conversation:', 
+    multi(<<-eos) % RANDOM_TXID
+    dropzone communication show
+      92UvdTpmxA6cvD6YeJZSiHW8ff8DsZXL2PHZu9Mg7JY3zbaETJw
+      %s
+    eos
+end
+
+command 'communication say' do |c|
+  c.when_called DropZoneCommand, :communication_say
+
+  c.syntax, c.summary, c.description = 
+    'dropzone communication say <private_key> <tx_id> <message>',
+    'Communicate to another party in a private/encrypted conversation over testnet.',
+    multi(<<-eos)
+      Append to the conversation <tx_id> at your testnet address <private> key
+      say the provided <message> to a receiving party.
+      eos
+
+  c.example 'Converse with another user over testnet:', 
+    multi(<<-eos) % RANDOM_TXID
+    dropzone communication say
+      92UvdTpmxA6cvD6YeJZSiHW8ff8DsZXL2PHZu9Mg7JY3zbaETJw
+      %s
+      "Thank you for your Inquiry"
+    eos
+end
+
+command 'communication new' do |c|
+  c.when_called DropZoneCommand, :communication_new
+
+  c.syntax, c.summary, c.description = 
+    'dropzone communication new <private_key> <addr>',
+    'Start a new conversation with the person at a given testnet address',
+    multi(<<-eos)
+      Start a conversation between your tesnet <private_key> and the user at
+      the specified testnet address <addr>. An initiation request needs only 
+      to be issued by one user, a recipient must reply to that request using
+      the "communication say" command, in order to authenticate the initiator's
+      request and perform key exchange. Thereafter, a channel between the two
+      addresses is established, and communications will remain open. 
+
+      NOTE: A communications secret is generated by Drop Zone for each recipient
+      that a connection has been established with, and these secrets are stored
+      in the ~/.dropzone/dropzone.db file. When the user responds to this request
+      a secret is automatically generated on their computer as well.
+      eos
+
+  c.example 'Start a conversation:', 
+    multi(<<-eos)
+    dropzone communication new
+      92UvdTpmxA6cvD6YeJZSiHW8ff8DsZXL2PHZu9Mg7JY3zbaETJw
+      mqVRfjepJTxxoDgDt892tCybhmjfKCFNyp
+    eos
+end
