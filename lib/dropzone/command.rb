@@ -302,7 +302,7 @@ class DropZoneCommand
     raise "missing one or more of: latitude, longitude, or radius."  if (
       via_location.any? && !via_location.all? )
 
-    start_at = params[:start_at].to_i || connection.block_height
+    start_at = params[:start_at] ? params[:start_at].to_i : connection.block_height
 
     finder_method = (via_location.all?) ? 
       [ :find_in_radius, start_at, block_depth, *via_location] :
