@@ -1,5 +1,26 @@
-Drop Zone [![Gem Version](https://badge.fury.io/rb/dropzone_ruby.svg)](http://badge.fury.io/rb/dropzone_ruby)
-=================
+# Drop Zone [![Gem Version](https://badge.fury.io/rb/dropzone_ruby.svg)](http://badge.fury.io/rb/dropzone_ruby)
+
+Drop Zone is a Ruby command line client for trading Bitcoin using nothing but the Blockchain / testnet. It  facilitates trade and secure messaging between buyers and sellers.
+
+[White Paper](http://www.metzdowd.com/pipermail/cryptography/2015-March/025212.html)
+
+[Rubygems](https://rubygems.org/gems/dropzone_ruby)
+
+## Getting Started
+
+With ruby 2.2.1 installed:
+
+    $ gem install dropzone_ruby
+
+Find a list of commands with:
+
+    $ dropzone help
+
+Fund a testnet key with tBTC or a mainnet key with BTC
+
+Create a seller or buyer profile
+
+## Author's Manifesto
 ![Drop Zone](dropzone-screenshot.jpg)
 
 To whom it may concern,
