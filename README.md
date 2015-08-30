@@ -1,6 +1,9 @@
 Drop Zone [![Gem Version](https://badge.fury.io/rb/dropzone_ruby.svg)](http://badge.fury.io/rb/dropzone_ruby)
 =================
-Drop Zone is a Ruby command line client for trading Bitcoin using nothing but the Blockchain / testnet. It  facilitates trade and secure messaging between buyers and sellers.
+Drop Zone is a Ruby command line client that facilitates trade and secure 
+messaging between buyers and sellers, using nothing but the Bitcoin network.
+Testnet is used for communications. Mainnet is used for the storage of listings,
+buyer profiles, and reputational events.
 
 [White Paper](http://www.metzdowd.com/pipermail/cryptography/2015-March/025212.html)
 

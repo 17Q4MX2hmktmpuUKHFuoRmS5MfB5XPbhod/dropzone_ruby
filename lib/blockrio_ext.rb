@@ -27,7 +27,7 @@ class BlockrIo
   # Ideally, this would work: json_get('block', 'txs', number.to_s)['data']['txs']
   def getblock(number)
     block_hash = getblockinfo(number)['hash']
-    
+
     resp  = RestClient::Resource.new( [ 'https://blockchain.info', 'block-index', 
       block_hash ].join('/')+'?format=json' ).get(content_type: 'json')
 
