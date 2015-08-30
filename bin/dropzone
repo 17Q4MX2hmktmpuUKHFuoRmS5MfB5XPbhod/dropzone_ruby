@@ -74,7 +74,7 @@ command 'balance' do |c|
 
   c.syntax, c.summary, c.description = 
     'dropzone balance <addr>',
-    'Display the balance on the provided address, in Bitcoin',
+    'Display the balance on the provided address, in Bitcoin, not including unconfirmed txs',
     multi(<<-eos)
       Given the provided public key, display the Bitcoin balance remaining in
       this account. Does not include unconfirmed transactions.
