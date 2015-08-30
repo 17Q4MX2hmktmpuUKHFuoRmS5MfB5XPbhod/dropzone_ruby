@@ -473,7 +473,7 @@ class DropZoneCommand
           sentence_splitter = /(.{1,#{data_width}})( +|$\n?)|(.{1,#{data_width}})/m
           v.scan(sentence_splitter).each_with_index.collect{|l,i|
           "| %-#{content_width}s |" % [ 
-            ("%-#{widest_key}s: %s" % [(i == 0) ? k : '',l.first]) ]
+            ("%-#{widest_key}s: %s" % [(i == 0) ? k : '',l.first||l.last]) ]
           }
         else
           "| %-#{content_width}s |" % ["%-#{widest_key}s: %s" % [k,v]]
