@@ -1,5 +1,5 @@
-# Drop Zone [![Gem Version](https://badge.fury.io/rb/dropzone_ruby.svg)](http://badge.fury.io/rb/dropzone_ruby)
-
+Drop Zone [![Gem Version](https://badge.fury.io/rb/dropzone_ruby.svg)](http://badge.fury.io/rb/dropzone_ruby)
+=================
 Drop Zone is a Ruby command line client for trading Bitcoin using nothing but the Blockchain / testnet. It  facilitates trade and secure messaging between buyers and sellers.
 
 [White Paper](http://www.metzdowd.com/pipermail/cryptography/2015-March/025212.html)
@@ -81,3 +81,7 @@ __quia omnis qui se exaltat humiliabitur et qui se humiliat exaltabitur__
   * The white paper expressed 8 digits of precision for the listing radius. This implementation instead uses 6 digits. If additional precision is later deemed necessary, a field can be added to the listing to accomodate enhanced precision
   * The white paper expressed pkeys (addresses) as being encoded ints. These are instead encoded as variable length strings.
   * The white paper expressed transaction ids as being encoded ints. These are instead encoded as variable length strings.
+
+## Changelog
+  * v0.1.1 - Addressed bugs in Listing find and buyer profiles
+  * v0.1 - First Release

@@ -57,7 +57,8 @@ module Dropzone
 
           (msg && msg.valid?) ? msg : nil
         rescue Counterparty::TxDecode::InvalidOutput,
-          Counterparty::TxDecode::MultisigUnsupported
+          Counterparty::TxDecode::MultisigUnsupported,
+          Counterparty::TxDecode::UndefinedBehavior
           next
         end
       }.compact
@@ -283,7 +284,7 @@ module Dropzone
         break if allocated >= amount
       }
 
-      raise WalletFundsTooLowOrNoUTXOs if allocated < amount
+      raise WalletFundsTooLowOrNoUTXOs, "Wallet Funds are too low, or no UTXOs are available. Try again in the next confirmation, and/or fund this wallet with more BTC/tBTC and UTXOs" if allocated < amount
 
       utxos
     end
