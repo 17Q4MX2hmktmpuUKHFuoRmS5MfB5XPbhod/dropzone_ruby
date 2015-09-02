@@ -1,3 +1,5 @@
+require 'time'
+
 module Dropzone
   module MessageValidations
     def self.included(base)
@@ -25,7 +27,7 @@ module Dropzone
   class MessageBase < RecordBase
     DEFAULT_TIP = 20_000
 
-    attr_reader :receiver_addr, :sender_addr, :message_type, :block_height, :txid
+    attr_reader :receiver_addr, :sender_addr, :message_type, :block_height, :txid, :time_utc
 
     def initialize(attrs = {})
       data = attrs.delete(:data)
@@ -67,6 +69,16 @@ module Dropzone
     def data_to_hash
       self.class.message_attribs.inject({}) do |ret , (short, full)|
         ret.merge(short => self.send(full))
+      end
+    end
+
+    def set_time_utc(time_utc)
+      if time_utc.is_a? String
+        @time_utc = Time.parse(time_utc)
+      elsif time_utc.is_a? Integer
+        @time_utc = Time.at(time_utc)
+      elsif time_utc.is_a? Time
+        @time_utc = time_utc
       end
     end
 

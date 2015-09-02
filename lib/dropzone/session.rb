@@ -116,8 +116,9 @@ module Dropzone
       if authenticated?
         communications = commun_messages(
           start_block: communication_init.block_height ).reject(&:is_auth?)
-        communications.each{|c| c.symm_key = symm_key}    
         communications
+          .each{|c| c.symm_key = symm_key}
+          .sort_by{|c| [c.block_height, c.time_utc]}
       else
         []
       end
