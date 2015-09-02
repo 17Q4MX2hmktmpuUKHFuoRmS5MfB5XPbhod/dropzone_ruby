@@ -54,6 +54,7 @@ module Dropzone
       ret = ret.collect{ |tx_h|
         begin
           msg = Dropzone::MessageBase.new_message_from tx_by_id(tx_h['tx'])
+          msg && msg.set_time_utc(tx_h['time_utc'])
 
           (msg && msg.valid?) ? msg : nil
         rescue Counterparty::TxDecode::InvalidOutput,
