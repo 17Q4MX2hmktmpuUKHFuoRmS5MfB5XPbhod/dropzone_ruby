@@ -280,7 +280,7 @@ class DropZoneCommand
     session = session_for privkey, comm_init
 
     puts_table '%s: %s' % ['Communication', txid], nil,
-     session.communications.collect{|comm|
+     session.communications.reverse.collect{|comm|
       [comm.sender_addr, comm.contents_plain] }
   end
 
