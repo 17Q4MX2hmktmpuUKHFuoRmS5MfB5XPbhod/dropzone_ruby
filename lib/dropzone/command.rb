@@ -187,7 +187,7 @@ class DropZoneCommand
     end
   end
 
-  def communication_new(args, options)
+  def chat_new(args, options)
     network! :testnet3
 
     privkey = privkey_from args, :testnet3
@@ -207,19 +207,28 @@ class DropZoneCommand
       [:sender_addr, privkey.addr], [:receiver_addr, receiver_addr] ]
   end
 
-  def communication_list(args, options)
+  def chat_list(args, options)
     network! :testnet3
 
     privkey = privkey_from args, :testnet3
 
-    Dropzone::Session.all(privkey.addr).each do |session|
-      puts_table '%s: %s' % ['Session', session.txid], nil, [ 
-        [:sender_addr, session.sender_addr], 
-        [:receiver_addr, session.receiver_addr] ]
+    Dropzone::Session.all(privkey.addr).each do |init|
+      session = session_for privkey, init
+
+      chat_with = [init.sender_addr, init.receiver_addr].find{|a| a != privkey.addr}
+
+      chats_cache = local_persistence[:chats].first(session_txid: init.txid)
+      read_messages = (chats_cache) ? chats_cache[:last_read_message_count] : 0
+      total_messages = session.communications.length
+      unread_messages = (total_messages-read_messages)
+
+      puts_table '%s: %s' % ['Session', init.txid], nil, [ 
+        ['Address', chat_with], 
+        ['Messages', '%d Unread / %d Total' % [unread_messages, total_messages ] ] ]
     end
   end
 
-  def communication_say(args, options)
+  def chat_say(args, options)
     network! :testnet3
 
     privkey = privkey_from args, :testnet3
@@ -258,13 +267,13 @@ class DropZoneCommand
 
     comm_txid = session << message
 
-    puts_table '%s: %s' % ['Communication', comm_txid], nil, [ 
+    puts_table '%s: %s' % ['Chat', comm_txid], nil, [ 
       ['Session', txid], 
       [:sender_addr, privkey.addr], 
       [:message, message] ]
   end
 
-  def communication_show(args, options)
+  def chat_show(args, options)
     network! :testnet3
 
     privkey = privkey_from args, :testnet3
@@ -279,9 +288,18 @@ class DropZoneCommand
 
     session = session_for privkey, comm_init
 
-    puts_table '%s: %s' % ['Communication', txid], nil,
+    update_attrs = {last_read_message_count: session.communications.length}
+
+    cache = local_persistence[:chats]
+    unless 1 == cache.where(session_txid: txid).update(update_attrs)
+      cache.insert update_attrs.merge(session_txid: txid)
+    end
+
+    puts_table '%s: %s' % ['Chat', txid], nil,
      session.communications.reverse.collect{|comm|
       [comm.sender_addr, comm.contents_plain] }
+
+    # TODO: Determine how many messages to show here, instead of 'all'
   end
 
   def listing_find(args, options)
@@ -384,14 +402,26 @@ class DropZoneCommand
       Dir.mkdir config_dir, 0700 unless Dir.exists? config_dir
 
       @local_persistence = Sequel.connect 'sqlite://%s/dropzone.db' % config_dir
-      
-      @local_persistence.create_table :communication_keys do
-        primary_key :id
-        String :sender_addr
-        String :receiver_addr
-        String :secret
-      end unless @local_persistence.table_exists? :communication_keys
     end
+
+    @local_persistence.create_table :communication_keys do
+      primary_key :id
+      String :sender_addr
+      String :receiver_addr
+      String :secret
+    end unless @local_persistence.table_exists? :communication_keys
+
+    @local_persistence.create_table :chats do
+      primary_key :id
+      String :session_txid
+      Integer :last_read_message_count
+    end unless @local_persistence.table_exists? :chats
+
+    @local_persistence.create_table :addresses do
+      primary_key :id
+      String :addr
+      String :label
+    end unless @local_persistence.table_exists? :addresses
 
     @local_persistence
   end

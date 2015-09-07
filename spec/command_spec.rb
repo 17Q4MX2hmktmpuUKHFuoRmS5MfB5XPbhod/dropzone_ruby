@@ -214,7 +214,7 @@ describe DropZoneCommand do
   end
 
   it "converses" do
-    expect{ DropZoneCommand.new(true).communication_new(
+    expect{ DropZoneCommand.new(true).chat_new(
       [test_privkey, TESTER2_PUBLIC_KEY], {}
     )}.to output(to_out(<<-eos)).to_stdout
     +---------------------------------------------------+
@@ -225,33 +225,33 @@ describe DropZoneCommand do
     +---------------------------------------------------+
     eos
 
-    expect{ DropZoneCommand.new(true).communication_list(
+    expect{ DropZoneCommand.new(true).chat_list(
       [test_privkey], {}
     )}.to output(to_out(<<-eos)).to_stdout
-    +---------------------------------------------------+
-    | Session: 7                                        |
-    +---------------------------------------------------+
-    | sender_addr  : mi37WkBomHJpUghCn7Vgh3ah33h6L9Nkqw |
-    | receiver_addr: mqVRfjepJTxxoDgDt892tCybhmjfKCFNyp |
-    +---------------------------------------------------+
+    +----------------------------------------------+
+    | Session: 7                                   |
+    +----------------------------------------------+
+    | Address : mqVRfjepJTxxoDgDt892tCybhmjfKCFNyp |
+    | Messages: 0 Unread / 0 Total                 |
+    +----------------------------------------------+
     eos
 
-    expect{ DropZoneCommand.new(true).communication_list(
+    expect{ DropZoneCommand.new(true).chat_list(
       [TESTER2_PRIVATE_KEY], {}
     )}.to output(to_out(<<-eos)).to_stdout
-    +---------------------------------------------------+
-    | Session: 7                                        |
-    +---------------------------------------------------+
-    | sender_addr  : mi37WkBomHJpUghCn7Vgh3ah33h6L9Nkqw |
-    | receiver_addr: mqVRfjepJTxxoDgDt892tCybhmjfKCFNyp |
-    +---------------------------------------------------+
+    +----------------------------------------------+
+    | Session: 7                                   |
+    +----------------------------------------------+
+    | Address : mi37WkBomHJpUghCn7Vgh3ah33h6L9Nkqw |
+    | Messages: 0 Unread / 0 Total                 |
+    +----------------------------------------------+
     eos
 
-    expect{ DropZoneCommand.new(true).communication_say(
+    expect{ DropZoneCommand.new(true).chat_say(
       [TESTER2_PRIVATE_KEY, '7', 'Greetings Initiator'], {}
     )}.to output(to_out(<<-eos)).to_stdout
     +-------------------------------------------------+
-    | Communication: 9                                |
+    | Chat: 9                                         |
     +-------------------------------------------------+
     | Session    : 7                                  |
     | sender_addr: mqVRfjepJTxxoDgDt892tCybhmjfKCFNyp |
@@ -259,11 +259,11 @@ describe DropZoneCommand do
     +-------------------------------------------------+
     eos
 
-    expect{ DropZoneCommand.new(true).communication_say(
+    expect{ DropZoneCommand.new(true).chat_say(
       [test_privkey, '7', 'Conversation Initiated'], {}
     )}.to output(to_out(<<-eos)).to_stdout
     +-------------------------------------------------+
-    | Communication: 10                               |
+    | Chat: 10                                        |
     +-------------------------------------------------+
     | Session    : 7                                  |
     | sender_addr: mi37WkBomHJpUghCn7Vgh3ah33h6L9Nkqw |
@@ -271,25 +271,25 @@ describe DropZoneCommand do
     +-------------------------------------------------+
     eos
 
-    expect{ DropZoneCommand.new(true).communication_show(
+    expect{ DropZoneCommand.new(true).chat_show(
       [test_privkey, '7'], {}
     )}.to output(to_out(<<-eos)).to_stdout
     +------------------------------------------------------------+
-    | Communication: 7                                           |
+    | Chat: 7                                                    |
     +------------------------------------------------------------+
-    | mi37WkBomHJpUghCn7Vgh3ah33h6L9Nkqw: Conversation Initiated |
     | mqVRfjepJTxxoDgDt892tCybhmjfKCFNyp: Greetings Initiator    |
+    | mi37WkBomHJpUghCn7Vgh3ah33h6L9Nkqw: Conversation Initiated |
     +------------------------------------------------------------+
     eos
 
-    expect{ DropZoneCommand.new(true).communication_show(
+    expect{ DropZoneCommand.new(true).chat_show(
       [TESTER2_PRIVATE_KEY, '7'], {}
     )}.to output(to_out(<<-eos)).to_stdout
     +------------------------------------------------------------+
-    | Communication: 7                                           |
+    | Chat: 7                                                    |
     +------------------------------------------------------------+
-    | mi37WkBomHJpUghCn7Vgh3ah33h6L9Nkqw: Conversation Initiated |
     | mqVRfjepJTxxoDgDt892tCybhmjfKCFNyp: Greetings Initiator    |
+    | mi37WkBomHJpUghCn7Vgh3ah33h6L9Nkqw: Conversation Initiated |
     +------------------------------------------------------------+
     eos
   end
@@ -315,11 +315,11 @@ is akin to that of Craigslist.org or Uber, but is distributed and as such provid
 risk-free terms to contraband sellers, and drastically reduced risk to contraband buyers.
     eos
 
-    expect{ DropZoneCommand.new(true).communication_say(
+    expect{ DropZoneCommand.new(true).chat_say(
       [test_privkey, '7', abstract], {}
     )}.to output(to_out(<<-eos)).to_stdout
     +----------------------------------------------------------------------------------+
-    | Communication: 11                                                                |
+    | Chat: 11                                                                         |
     +----------------------------------------------------------------------------------+
     | Session    : 7                                                                   |
     | sender_addr: mi37WkBomHJpUghCn7Vgh3ah33h6L9Nkqw                                  |

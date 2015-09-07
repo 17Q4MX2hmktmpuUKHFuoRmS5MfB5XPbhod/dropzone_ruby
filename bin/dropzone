@@ -400,11 +400,11 @@ command 'review create' do |c|
     "The seller's communications skill. Between 0 (worst) to 8 (best)"
 end
 
-command 'communication list' do |c|
-  c.when_called DropZoneCommand, :communication_list
+command 'chat list' do |c|
+  c.when_called DropZoneCommand, :chat_list
 
   c.syntax, c.summary, c.description = 
-    'dropzone communication list <private_key>',
+    'dropzone chat list <private_key>',
     'Show all the available communication channels for the given testnet address',
     multi(<<-eos)
       This command lists all the conversations that have been initiated and/or
@@ -414,16 +414,16 @@ command 'communication list' do |c|
 
   c.example 'List all communication sessions for a testnet address:', 
     multi(<<-eos)
-    dropzone communication list
+    dropzone chat list
       92UvdTpmxA6cvD6YeJZSiHW8ff8DsZXL2PHZu9Mg7JY3zbaETJw
     eos
 end
 
-command 'communication show' do |c|
-  c.when_called DropZoneCommand, :communication_show
+command 'chat show' do |c|
+  c.when_called DropZoneCommand, :chat_show
 
   c.syntax, c.summary, c.description = 
-    'dropzone communication show <private_key> <tx_id>',
+    'dropzone chat show <private_key> <tx_id>',
     'Show all the available communication channels for the given testnet address',
     multi(<<-eos)
       Output a full conversation, start to finish, between the testnet 
@@ -432,17 +432,17 @@ command 'communication show' do |c|
 
   c.example 'Show the conversation:', 
     multi(<<-eos) % RANDOM_TXID
-    dropzone communication show
+    dropzone chat show
       92UvdTpmxA6cvD6YeJZSiHW8ff8DsZXL2PHZu9Mg7JY3zbaETJw
       %s
     eos
 end
 
-command 'communication say' do |c|
-  c.when_called DropZoneCommand, :communication_say
+command 'chat say' do |c|
+  c.when_called DropZoneCommand, :chat_say
 
   c.syntax, c.summary, c.description = 
-    'dropzone communication say <private_key> <tx_id> <message>',
+    'dropzone chat say <private_key> <tx_id> <message>',
     'Communicate to another party in a private/encrypted conversation over testnet.',
     multi(<<-eos)
       Append to the conversation <tx_id> at your testnet address <private> key
@@ -451,24 +451,24 @@ command 'communication say' do |c|
 
   c.example 'Converse with another user over testnet:', 
     multi(<<-eos) % RANDOM_TXID
-    dropzone communication say
+    dropzone chat say
       92UvdTpmxA6cvD6YeJZSiHW8ff8DsZXL2PHZu9Mg7JY3zbaETJw
       %s
       "Thank you for your Inquiry"
     eos
 end
 
-command 'communication new' do |c|
-  c.when_called DropZoneCommand, :communication_new
+command 'chat new' do |c|
+  c.when_called DropZoneCommand, :chat_new
 
   c.syntax, c.summary, c.description = 
-    'dropzone communication new <private_key> <addr>',
+    'dropzone chat new <private_key> <addr>',
     'Start a new conversation with the person at a given testnet address',
     multi(<<-eos)
       Start a conversation between your tesnet <private_key> and the user at
       the specified testnet address <addr>. An initiation request needs only 
       to be issued by one user, a recipient must reply to that request using
-      the "communication say" command, in order to authenticate the initiator's
+      the "chat say" command, in order to authenticate the initiator's
       request and perform key exchange. Thereafter, a channel between the two
       addresses is established, and communications will remain open. 
 
@@ -480,7 +480,7 @@ command 'communication new' do |c|
 
   c.example 'Start a conversation:', 
     multi(<<-eos)
-    dropzone communication new
+    dropzone chat new
       92UvdTpmxA6cvD6YeJZSiHW8ff8DsZXL2PHZu9Mg7JY3zbaETJw
       mqVRfjepJTxxoDgDt892tCybhmjfKCFNyp
     eos
