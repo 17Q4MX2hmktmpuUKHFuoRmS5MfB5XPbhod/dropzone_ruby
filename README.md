@@ -5,7 +5,7 @@ messaging between buyers and sellers, using nothing but the Bitcoin network.
 Testnet is used for communications. Mainnet is used for the storage of listings,
 buyer profiles, and reputational events.
 
-[White Paper](http://www.metzdowd.com/pipermail/cryptography/2015-March/025212.html)
+[White Paper](Drop Zone - Whitepaper.pdf)
 
 [Rubygems](https://rubygems.org/gems/dropzone_ruby)
 
@@ -86,5 +86,6 @@ __quia omnis qui se exaltat humiliabitur et qui se humiliat exaltabitur__
   * The white paper expressed transaction ids as being encoded ints. These are instead encoded as variable length strings.
 
 ## Changelog
+  * v0.1.2 - Cleaned up the chat listing interface (renamed communication to chat). Fixed issue with new session create
   * v0.1.1 - Addressed bugs in Listing find and buyer profiles
   * v0.1 - First Release

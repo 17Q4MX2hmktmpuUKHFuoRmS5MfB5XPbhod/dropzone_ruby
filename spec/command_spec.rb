@@ -16,6 +16,8 @@ describe DropZoneCommand do
     # ran before us.
     db = FakeBitcoinConnection::DB.execute(
       "UPDATE SQLITE_SEQUENCE SET SEQ=0 WHERE NAME='transactions';" )
+
+   DropZoneCommand.local_persistence = Sequel.sqlite
   end
 
   def to_out(string)

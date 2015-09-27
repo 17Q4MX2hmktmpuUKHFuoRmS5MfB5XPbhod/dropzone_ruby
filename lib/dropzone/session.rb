@@ -62,12 +62,11 @@ module Dropzone
       # If we're already authenticated, we'll try to re-initialize. Presumably
       # one would want to do this if they lost a secret key, or that key were
       # somehow compromised
-      if is_init
-        dh = OpenSSL::PKey::DH.new(der || 1024)
-     else
-        raise DerAlreadyExists unless der.nil?
-        dh = OpenSSL::PKey::DH.new with.der
-      end
+      raise DerAlreadyExists unless der.nil? if !is_init
+
+      der ||= (with) ? with.der : 1024
+
+      dh = OpenSSL::PKey::DH.new der
 
       dh.priv_key = session_key
       dh.generate_key! 

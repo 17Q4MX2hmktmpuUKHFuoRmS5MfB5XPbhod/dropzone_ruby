@@ -64,6 +64,40 @@ class DropZoneCommand
   MAX_TABLE_WIDTH = 80
 
   class << self
+    def local_persistence=(store)
+      @local_persistence = store
+    end
+
+    def local_persistence
+      unless @local_persistence
+        config_dir = File.join(Dir.home, ".dropzone")
+        Dir.mkdir config_dir, 0700 unless Dir.exists? config_dir
+
+        @local_persistence = Sequel.connect('sqlite://%s/dropzone.db' % config_dir )
+      end
+
+      @local_persistence.create_table :communication_keys do
+        primary_key :id
+        String :sender_addr
+        String :receiver_addr
+        String :secret
+      end unless @local_persistence.table_exists? :communication_keys
+
+      @local_persistence.create_table :chats do
+        primary_key :id
+        String :session_txid
+        Integer :last_read_message_count
+      end unless @local_persistence.table_exists? :chats
+
+      @local_persistence.create_table :addresses do
+        primary_key :id
+        String :addr
+        String :label
+      end unless @local_persistence.table_exists? :addresses
+
+      @local_persistence
+    end
+
     def create_command(action, klass, label, *attributes, &block)
       define_method(action) do |args, options|
         privkey = privkey_from args
@@ -379,6 +413,10 @@ class DropZoneCommand
 
   private
 
+  def local_persistence
+    self.class.local_persistence
+  end
+
   def secret_for(sender_addr, receiver_addr)
     record = local_persistence[:communication_keys].where( 
       Sequel.expr(receiver_addr: receiver_addr) & 
@@ -394,36 +432,6 @@ class DropZoneCommand
 
       secret
     end
-  end
-
-  def local_persistence
-    unless @local_persistence
-      config_dir = File.join(Dir.home, ".dropzone")
-      Dir.mkdir config_dir, 0700 unless Dir.exists? config_dir
-
-      @local_persistence = Sequel.connect 'sqlite://%s/dropzone.db' % config_dir
-    end
-
-    @local_persistence.create_table :communication_keys do
-      primary_key :id
-      String :sender_addr
-      String :receiver_addr
-      String :secret
-    end unless @local_persistence.table_exists? :communication_keys
-
-    @local_persistence.create_table :chats do
-      primary_key :id
-      String :session_txid
-      Integer :last_read_message_count
-    end unless @local_persistence.table_exists? :chats
-
-    @local_persistence.create_table :addresses do
-      primary_key :id
-      String :addr
-      String :label
-    end unless @local_persistence.table_exists? :addresses
-
-    @local_persistence
   end
 
   def session_for(privkey, comm_init)
