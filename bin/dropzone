@@ -133,16 +133,16 @@ command 'listing find' do |c|
   c.example 'Find listings in block 371812', 
     'dropzone listing find 0 --start_at 371812'
 
-  c.option '--latitude LAT ', Float, 
+  c.option '--latitude LAT', Float, 
     'The approximate latitude of your location.'
-  c.option '--longitude LON ', Float, 
+  c.option '--longitude LON', Float, 
     'The approximate longitude of your location.'
-  c.option '--radius METERS ', Integer, multi(<<-eos)
+  c.option '--radius METERS', Integer, multi(<<-eos)
     The approximate diameter you wish to search around the provided 
     latitude and longitude. The expected unit of distance is in meters.
     eos
 
-  c.option '--start_at BLOCKHEIGHT ', Integer, multi(<<-eos)
+  c.option '--start_at BLOCKHEIGHT', Integer, multi(<<-eos)
     Start searching from the specified block height until <block_depth> 
     'blocks down'. The default behavior is to start at the current blockchain 
     height.
@@ -164,9 +164,9 @@ def listing_create_update_options(cmd)
     A three or four digit currency identifier. Common values would include 
     'BTC' or 'USD', though any identifier can be specified
     eos
-  cmd.option '--price_in_units PRICE ', Integer, 
+  cmd.option '--price_in_units PRICE', Integer, 
     'The price of the specified item denominated in cents, or satoshis, etc.'
-  cmd.option '--expiration_in NBLOCKS ', Integer, multi(<<-eos)
+  cmd.option '--expiration_in NBLOCKS', Integer, multi(<<-eos)
     The expiration time of the item. "Times" are to be indicated in the number 
     of blocks that this listing is available for. Omitting this field indicates 
     no expiration. Note that clients will likely override the seller's 
@@ -349,7 +349,7 @@ command 'invoice create' do |c|
 
   c.option '--amount_due BTC', String, 
     'Amount due, denominated in Bitcoin (ie "0.5")'
-  c.option '--expiration_in NBLOCKS ', Integer, multi(<<-eos)
+  c.option '--expiration_in NBLOCKS', Integer, multi(<<-eos)
     The expiration time of the invoice. "Times" are to be indicated in the number 
     of blocks that this listing is available for. Omitting this field indicates 
     no expiration. Specifying an expiration is useful for locking in an exchange
@@ -380,7 +380,7 @@ command 'review create' do |c|
 
   c.example 'Review a purchase:', multi(<<-eos) % [RANDOM_TXID]
     dropzone review create 
-      --description: 'Fair exchange"
+      --description: "Fair exchange"
       --delivery_quality 8, 
       --product_quality 8
       --communications_quality 4
@@ -394,7 +394,7 @@ command 'review create' do |c|
     'The quality of the delivery itself. Between 0 (worst) to 8 (best)'
 
   c.option '--product_quality N', Integer, 
-    'The quality of the product.  Between 0 (worst) to 8 (best)'
+    'The quality of the product. Between 0 (worst) to 8 (best)'
 
   c.option '--communications_quality N', Integer, 
     "The seller's communications skill. Between 0 (worst) to 8 (best)"
@@ -443,7 +443,7 @@ command 'chat say' do |c|
 
   c.syntax, c.summary, c.description = 
     'dropzone chat say <private_key> <tx_id> <message>',
-    'Communicate to another party in a private/encrypted conversation over testnet.',
+    'Communicate to another party in a private/encrypted conversation over testnet',
     multi(<<-eos)
       Append to the conversation <tx_id> at your testnet address <private> key
       say the provided <message> to a receiving party.
