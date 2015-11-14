@@ -19,6 +19,10 @@ Find a list of commands with:
 
     $ dropzone help
 
+Online help for individual commands can be obtained like so (example for `chat list`):
+
+    $ dropzone help chat list
+
 Fund a testnet key with tBTC or a mainnet key with BTC
 
 Create a seller or buyer profile
