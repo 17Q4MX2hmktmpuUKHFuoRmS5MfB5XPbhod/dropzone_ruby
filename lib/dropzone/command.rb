@@ -108,10 +108,17 @@ class DropZoneCommand
 
         message = klass.new params
 
-        txid = message.save! privkey.to_base58
+        if (message.valid?)
+          txid = message.save! privkey.to_base58
 
-        puts_object '%s: %s' % [label, message.receiver_addr], 'Tx: %s' % txid, attributes, 
-          message
+          puts_object '%s: %s' % [label, message.receiver_addr], 
+            'Tx: %s' % txid, attributes, message
+        else
+          puts "Errors Found in %s:" % label
+          message.errors.each_pair do |attr, reasons|
+            puts ' * "%s": %s' % [attr, reasons.join(', ')]
+          end
+        end
       end
     end
 

@@ -67,6 +67,3 @@ DEPENDENCIES
   rdoc (~> 4.2)
   rspec (~> 3.2)
   sham (~> 1.1)
-
-BUNDLED WITH
-   1.11.2
