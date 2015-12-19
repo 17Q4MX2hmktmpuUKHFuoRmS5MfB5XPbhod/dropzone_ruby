@@ -9,8 +9,8 @@ describe Dropzone do
 
     before(:all) do
       Bitcoin.network = :testnet3
-      TCPSocket::socks_server = "127.0.0.1"
-      TCPSocket::socks_port = 9050
+      #TCPSocket::socks_server = "127.0.0.1"
+      #TCPSocket::socks_port = 9050
       # Socksify::debug = true
       #RestClient.log = Logger.new STDOUT
 

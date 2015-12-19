@@ -290,5 +290,45 @@ describe Dropzone::Item do
     end
   end
 
+  describe "problematic decodes" do
+    # @Junseth Issue #18:
+    # txid: 73cfb35e1e6bb31b3ddffb41322c46f155970bfae3c40385b171ba02f88985a0
+    it "Fails to decode invalid radius transaction" do
+      tx_id = '73cfb35e1e6bb31b3ddffb41322c46f155970bfae3c40385b171ba02f88985a0'
+      tx_hex = '01000000017ecf3bcdd734881a466b2fcb8ff9c602ff96190ecbda86fadd2'+
+        'f907bfeb7f22a020000006b4830450221008b343292dbc140379bdcdad613fd8bd2b'+
+        'e739147a10f57b5dd3f6c23afe818e402201edbe946b27a0183a3d98ce61f0f88872'+
+        '1330c8694f8b700448d8c902317db4c0121031bf0b235cb0cefcf8c9c299f3009257'+
+        '04d6da7e6b448bd185c80d28f1216ef44ffffffff0536150000000000001976a9141'+
+        'f319c85b0cb2667e09fc4388dc209b0c4a240d388ac3615000000000000695121039'+
+        'fb679314a062d887537ad75b6e056bd4020807e56d742cd0aa77bf890aea5e121027'+
+        'fdb01ce03a72c67551b80e18a612a4789a6b3d168e4ca883dd7236d2c19b60f21031'+
+        'bf0b235cb0cefcf8c9c299f300925704d6da7e6b448bd185c80d28f1216ef4453ae3'+
+        '615000000000000695121039fb679166a6b5f8f5951a77ef1a258a50368c22f5dd15'+
+        '9dc07a824a29dacaa0a21026bdb01e004a62f2f7b1cceecde622814d2fdb4d63ca5c'+
+        '8d1668e2d78263defb421031bf0b235cb0cefcf8c9c299f300925704d6da7e6b448b'+
+        'd185c80d28f1216ef4453ae361500000000000069512103aeb679311f267c896372c'+
+        '86b8b823adc234ba05d34b631a868c61794bdcdc48221030ffb228a71c85c4a0f74e'+
+        'e84aa16582efdd2d6bf488ba4a849bf464d4a6bd93021031bf0b235cb0cefcf8c9c2'+
+        '99f300925704d6da7e6b448bd185c80d28f1216ef4453ae2cf41100000000001976a'+
+        '9142bb8d14d65d316483e24da5512bfd2a977da85ea88ac00000000'
 
+      tx = Bitcoin::P::Tx.new [tx_hex].pack('H*')
+
+      record = Counterparty::TxDecode.new tx,
+        prefix: Dropzone::BitcoinConnection::PREFIX
+
+      item = Dropzone::Item.new(data: record.data, 
+        receiver_addr: record.receiver_addr, 
+        txid: tx_id, sender_addr: record.sender_addr)
+
+      expect(item.valid?).to eq(false)
+      expect(item.errors.count).to eq(3)
+      expect(item.errors.on(:latitude)).to eq(['is not a number'])
+      expect(item.errors.on(:longitude)).to eq(['is not a number'])
+      expect(item.errors.on(:radius)).to eq(['is not a number'])
+
+    end
+
+  end
 end
