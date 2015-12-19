@@ -115,7 +115,7 @@ module Dropzone
 
     def address_parts(addr, part)
       parts = HASH_160_PARTS.match(addr)
-      (parts.length > 0) ? parts[part+1].tr('X','0').to_i : nil
+      (parts && parts.length > 0) ? parts[part+1].tr('X','0').to_i : nil
     end
 
     def latlon_to_integer(lat_or_lon, unsigned_offset = 90)
