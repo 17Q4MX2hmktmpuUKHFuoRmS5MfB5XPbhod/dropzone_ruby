@@ -11,7 +11,9 @@ buyer profiles, and reputational events.
 
 ## Getting Started
 
-With ruby 2.2.1 installed:
+Install ruby 2.2.1 and corresponding rubygems and ruby-dev (Ubuntu/Debian) or ruby-devel (CentOS, Fedora) packages.
+
+With ruby installed:
 
     $ gem install dropzone_ruby
 
