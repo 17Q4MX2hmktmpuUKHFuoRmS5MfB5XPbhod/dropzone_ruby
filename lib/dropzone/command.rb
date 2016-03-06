@@ -238,6 +238,11 @@ class DropZoneCommand
     raise OptionParser::MissingArgument, 'addr' unless (
       receiver_addr && Bitcoin.valid_address?(receiver_addr) )
 
+    if privkey.addr == receiver_addr
+      raise OptionParser::InvalidArgument, 
+        "Conversing with oneself is unsupported. Please choose a different address" 
+    end
+
     session = Dropzone::Session.new privkey.to_base58,
       secret_for(privkey.addr, receiver_addr),
       receiver_addr: receiver_addr 
