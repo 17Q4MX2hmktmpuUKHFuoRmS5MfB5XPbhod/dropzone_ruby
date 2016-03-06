@@ -147,7 +147,7 @@ class DropZoneCommand
     :communications_quality, :invoice_txid ]
 
   ADDRESS_TO_SELF = lambda{|privkey, args, params|
-    params.merge!(receiver_addr: privkey.addr) }
+    params.merge!(receiver_addr: params[:transfer_pkey] || privkey.addr) }
 
   RECORD_BY_FIND = lambda{|klass, id| klass.find id }
 
