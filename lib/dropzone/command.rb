@@ -64,6 +64,8 @@ class DropZoneCommand
   MAX_TABLE_WIDTH = 80
 
   class << self
+    attr_accessor :output_json
+
     def local_persistence=(store)
       @local_persistence = store
     end
@@ -495,43 +497,59 @@ class DropZoneCommand
   end
 
   def puts_object(header, footer, attributes, object)
-    puts_table header, footer, attributes.collect{|attr| 
-      value = object.send(attr)
-      [attr, value] if value
-    }.compact
+    attributes_h = attributes.collect{|attr| 
+        value = object.send(attr)
+        value = value.to_s.encode('UTF-8', { :invalid => :replace, 
+          :undef => :replace, :replace => '?' }) if value.kind_of? String
+        [attr, value] if value
+      }.compact
+
+    if self.class.output_json
+      puts Hash[attributes_h].merge({:header => header, 
+        :footer => footer}.reject{|k,v| v.nil?}).to_json
+    else
+      puts_table header, footer, attributes_h
+    end
   end
 
   def puts_table(header, footer, pairs)
-    pairs_h = pairs.to_h
-    widest_key = pairs_h.keys.sort_by{|k| k.to_s.length}.last.to_s.length
-    widest_value = pairs_h.values.sort_by{|v| v.to_s.length}.last.to_s.length
+    if self.class.output_json
+      out = [[header]]
+      out += pairs if pairs && pairs.length >0
+      out += [[footer]] if footer
+      puts out.to_json
+    else
+      pairs_h = pairs.to_h
+      widest_key = pairs_h.keys.sort_by{|k| k.to_s.length}.last.to_s.length
+      widest_value = pairs_h.values.sort_by{|v| v.to_s.length}.last.to_s.length
 
-    widest_header = (footer.nil? || (header.length > footer.length) ) ? 
-      header.length : footer.length
+      widest_header = (footer.nil? || (header.length > footer.length) ) ? 
+        header.length : footer.length
 
-    content_width = ((widest_key+widest_value) > widest_header) ?
-      (widest_key+widest_value + 2) : widest_header
+      content_width = ((widest_key+widest_value) > widest_header) ?
+        (widest_key+widest_value + 2) : widest_header
 
-    content_width = MAX_TABLE_WIDTH if content_width > MAX_TABLE_WIDTH
+      content_width = MAX_TABLE_WIDTH if content_width > MAX_TABLE_WIDTH
 
-    endcap = "+%s+" % [ '-'*(content_width+2)] 
+      endcap = "+%s+" % [ '-'*(content_width+2)] 
 
-    puts [ endcap, "| %-#{content_width}s |" % [header], endcap,
-      pairs.collect{|k,v| 
-        if (k.to_s.length+v.to_s.length+2) > content_width
-          data_width = content_width-widest_key-3
-          sentence_splitter = /(.{1,#{data_width}})( +|$\n?)|(.{1,#{data_width}})/m
-          v.scan(sentence_splitter).each_with_index.collect{|l,i|
-          "| %-#{content_width}s |" % [ 
-            ("%-#{widest_key}s: %s" % [(i == 0) ? k : '',l.first||l.last]) ]
-          }
-        else
-          "| %-#{content_width}s |" % ["%-#{widest_key}s: %s" % [k,v]]
-        end
-      },
-      endcap, 
-      (footer) ? ["| %-#{content_width}s |" % [footer], endcap] : nil
-    ].flatten.join("\n")
+      puts [ endcap, "| %-#{content_width}s |" % [header], endcap,
+        pairs.collect{|k,v| 
+          if (k.to_s.length+v.to_s.length+2) > content_width
+            data_width = content_width-widest_key-3
+            sentence_splitter = /(.{1,#{data_width}})( +|$\n?)|(.{1,#{data_width}})/m
+            v.scan(sentence_splitter).each_with_index.collect{|l,i|
+            "| %-#{content_width}s |" % [ 
+              ("%-#{widest_key}s: %s" % [(i == 0) ? k : '',l.first||l.last]) ]
+            }
+          else
+            "| %-#{content_width}s |" % ["%-#{widest_key}s: %s" % [k,v]]
+          end
+        },
+        endcap, 
+        (footer) ? ["| %-#{content_width}s |" % [footer], endcap] : nil
+      ].flatten.join("\n")
+    end
   end
 
 end
