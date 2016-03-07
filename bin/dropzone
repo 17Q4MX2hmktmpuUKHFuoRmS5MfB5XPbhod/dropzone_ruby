@@ -60,6 +60,11 @@ global_option('--force_testnet',
   Bitcoin.network  = :testnet3
 end
 
+global_option('--output_json', 
+  'Print JSON on successful program output, instead of human readable tables') do 
+  DropZoneCommand.output_json = true
+end
+
 global_option('--tip SATOSHIS', 
   'Set the transaction tip amount. Defaults to 20000') do |satoshis|
   satoshis_i = $1.to_i if /\A([\d]+)\Z/.match satoshis
