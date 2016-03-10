@@ -36,8 +36,5 @@ module Dropzone
 
     # Content always needs an iv:
     validates :iv, not_null: true, unless: 'self.contents.nil?'
-
-    # We should always have either contents or a pkey:
-    validates :contents, not_null: true, if: 'self.session_pkey.nil?'
   end
 end
