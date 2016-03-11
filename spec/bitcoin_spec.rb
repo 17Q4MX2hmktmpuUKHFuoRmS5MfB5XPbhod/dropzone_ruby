@@ -63,6 +63,7 @@ describe Dropzone do
       expect(item.longitude).to eq(-0.124669)
       expect(item.radius).to eq(1000)
       expect(item.receiver_addr).to eq('mfZ1415XX782179875331XX1XXXXXgtzWu')
+      expect(item.block_height).to eq(533721)
     end
 
     it "enumerates messages by address for a seller" do 
@@ -102,6 +103,7 @@ describe Dropzone do
       expect(payment.communications_quality).to eq(4)
       expect(payment.sender_addr).to eq('mqVRfjepJTxxoDgDt892tCybhmjfKCFNyp')
       expect(payment.receiver_addr).to eq('mi37WkBomHJpUghCn7Vgh3ah33h6L9Nkqw')
+      expect(payment.block_height).to eq(533725)
     end
 
     it "Enumerates through listings via Item" do 
@@ -109,6 +111,75 @@ describe Dropzone do
       # and blockr.io's implementation not including all transactions
       pending 
       
+    end
+
+    it "decodes a 1.0 seller profile" do
+      connection = Dropzone::BitcoinConnection.new :bitcoin
+      Dropzone::RecordBase.blockchain = connection
+
+      junseth = Dropzone::Seller.find '3d2b3339855e1244fbef627f374e2bba888c1a706f9e9b5c4a59f49cb268f074'
+
+      expect(junseth.description).to eq(
+        'junseth here, making modest amounts of moolah.')
+      expect(junseth.alias).to eq('junseth')
+      expect(junseth.transfer_pkey).to be_nil
+      expect(junseth.communications_pkey).to eq('mjuNSeTHvjiwTXfaSABHenKdAE85pCiM64')
+      expect(junseth.receiver_addr).to eq('14zBTbnhzHjdAKkaR4J9kCPiyVyNoaqoti')
+      expect(junseth.block_height).to eq(388933)
+    end
+
+    # This is mostly the result of an investigation that was prompted by loon3
+    # over the (potential) double-encoding of transactions
+    it "Encodes addresses as expected" do
+      # This is tx: 
+      # 3d2b3339855e1244fbef627f374e2bba888c1a706f9e9b5c4a59f49cb268f074
+      junseth_seller_hex = "0100000001a08589f802ba71b18503c4e3fa0b9755f1462c32"+
+        "41fbdf3d1bb36b1e5eb3cf73040000006a47304402205c474b5738de9c12889a0137c"+
+        "def48fdfe7e13391d8f5ab4a5aca562d86f653f02201f49b7728225c17ca41ed81a74"+
+        "9be17dd192790bed6e5e3d46482248195d683d0121031bf0b235cb0cefcf8c9c299f3"+
+        "00925704d6da7e6b448bd185c80d28f1216ef44ffffffff0436150000000000001976"+
+        "a9142bb8d14d65d316483e24da5512bfd2a977da85ea88ac361500000000000069512"+
+        "10303f2d3ec6902ceba50630236a01f09a29e18fb4690ad4aeb32fa964beed6407b21"+
+        "028784f2f482488a153322789d4f6cbffc9b41d13284fe8182b72ecf8fde91fcb4210"+
+        "31bf0b235cb0cefcf8c9c299f300925704d6da7e6b448bd185c80d28f1216ef4453ae"+
+        "36150000000000006951210221f2d3ca4b24fb8a6c63160cfa77a838c795d99844000"+
+        "7329a35894e7fe9d86a210304a49f9be62df961134315f23a02cb8fbb2eb712e991ee"+
+        "eed646e18ebf9696ba21031bf0b235cb0cefcf8c9c299f300925704d6da7e6b448bd1"+
+        "85c80d28f1216ef4453ae6a661100000000001976a9142bb8d14d65d316483e24da55"+
+        "12bfd2a977da85ea88ac00000000"
+
+      tx = Bitcoin::P::Tx.new [junseth_seller_hex].pack('H*')
+
+      record = Counterparty::TxDecode.new tx,
+        prefix: Dropzone::BitcoinConnection::PREFIX
+
+      expect(record.prefix).to eq('DZ')
+      expect(record.receiver_addr).to eq('mjW8kesgoKAswSEC8dGXa7c3qVa5ixiG4M')
+      expect(record.sender_addr).to eq('mjW8kesgoKAswSEC8dGXa7c3qVa5ixiG4M')
+      expect(record.decrypt_key.unpack('H*').first).to eq(
+        '73cfb35e1e6bb31b3ddffb41322c46f155970bfae3c40385b171ba02f88985a0')
+      expect(record.data.unpack('H*').first).to eq(
+        '534c5550445401642e6a756e7365746820686572652c206d616b696e67206d6f64657'+
+        '37420616d6f756e7473206f66206d6f6f6c61682e0161076a756e7365746801701430'+
+        '1dcfe93cf94afebcc83fbc84ef7264fa56f6e4')
+      
+      record_bytes = record.data.bytes
+      expect(record_bytes.shift(6).collect(&:chr).join).to eq('SLUPDT')
+      expect(record_bytes.shift(49).collect(&:chr).join).to eq(
+        "\x01d.junseth here, making modest amounts of moolah.")
+      expect(record_bytes.shift(10).collect(&:chr).join).to eq(
+        "\x01a\ajunseth")
+
+      # Here's the nature of the bug in 1.0 encoding:
+      expect(record_bytes.shift(2).collect(&:chr).join).to eq("\x01p")
+      # This length should be
+      expect(record_bytes.shift(1).first).to eq(20)
+
+      communications_value = record_bytes.shift(20).collect(&:chr).join
+      expect(communications_value).to eq(
+        ['301dcfe93cf94afebcc83fbc84ef7264fa56f6e4'].pack('H*'))
+
+      expect(record_bytes.length).to eq(0)
     end
 
   end
