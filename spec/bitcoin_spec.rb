@@ -182,5 +182,67 @@ describe Dropzone do
       expect(record_bytes.length).to eq(0)
     end
 
+    it 'encodes reviews with binary transaction ids' do
+      hex = '0100000001309ab7c3ed6adbee0bd99632e7963e08f9536e71a55246164166e5b'+
+         '8c986c445000000008b483045022100b33969420513204d7c49122178cf2b7134d1c'+
+         '653cf977ba96488278ddc7f33c102201dbb9be43443d2301242db395278c406c8020'+
+         'b53a54c7754df4ad758203bf98a014104ab937a60d8f052a7df5f1400c1ff8ec9bd6'+
+         '4eda9107901ddf9ee5f64fe26e58aa31fe454cda94c56b9ba4c6f045763b6aac0890'+
+         '8e2ef1f601e4a8ccbfa54be82ffffffff0636150000000000001976a9142bb8d14d6'+
+         '5d316483e24da5512bfd2a977da85ea88ac36150000000000008951210277bad52da'+
+         'd98a0a4506f66252989eed89f4770097aed3e8327663272dcd80e122103f5b197f13'+
+         'c5facf5f6412b2e0db88b12eaa77021decfe470ef71c6a5ba23350f4104ab937a60d'+
+         '8f052a7df5f1400c1ff8ec9bd64eda9107901ddf9ee5f64fe26e58aa31fe454cda94'+
+         'c56b9ba4c6f045763b6aac08908e2ef1f601e4a8ccbfa54be8253ae3615000000000'+
+         '0008951210277bad50b8aab84c334226d29058fefdb9f42701660f9228e6473293bd'+
+         '4d35aaa2102f6b18dfe3c44a8edb404182b06d5ca32fbeb682b8cade255eb30c2b0e'+
+         '57927b44104ab937a60d8f052a7df5f1400c1ff8ec9bd64eda9107901ddf9ee5f64f'+
+         'e26e58aa31fe454cda94c56b9ba4c6f045763b6aac08908e2ef1f601e4a8ccbfa54b'+
+         'e8253ae36150000000000008951210377bad551d7a983d4700b37760885b7d9dd452'+
+         'b5520ae69d37565717ed18e48dc2102baec81fb794fa8aaae1c6b634cced953fdb63'+
+         '62dcfcfa625bb35c2e0e04c20624104ab937a60d8f052a7df5f1400c1ff8ec9bd64e'+
+         'da9107901ddf9ee5f64fe26e58aa31fe454cda94c56b9ba4c6f045763b6aac08908e'+
+         '2ef1f601e4a8ccbfa54be8253ae36150000000000008951210249bad56ce3c8e1ed1'+
+         '46e02466ee681bcbf241f64179850ea4407461bb3b62ebd210382d8e3991c2cc9999'+
+         'a2459002dfeea619e87044efeac96158e05a385d34d43154104ab937a60d8f052a7d'+
+         'f5f1400c1ff8ec9bd64eda9107901ddf9ee5f64fe26e58aa31fe454cda94c56b9ba4'+
+         'c6f045763b6aac08908e2ef1f601e4a8ccbfa54be8253ae72ce0000000000001976a'+
+         '914bce6181b66ce5ab5ca854feb00995f14fc07308588ac00000000'
+
+      record = Counterparty::TxDecode.new Bitcoin::P::Tx.new([hex].pack('H*')),
+        prefix: Dropzone::BitcoinConnection::PREFIX
+
+      expect(record.prefix).to eq('DZ')
+      expect(record.receiver_addr).to eq('mjW8kesgoKAswSEC8dGXa7c3qVa5ixiG4M')
+      expect(record.sender_addr).to eq('mxjkyLk6sybkRWSYw2WRMrX7S3VNaQYXFv')
+      expect(record.decrypt_key.unpack('H*').first).to eq(
+        '45c486c9b8e56641164652a5716e53f9083e96e73296d90beedb6aedc3b79a30')
+      expect(record.data.unpack('H*').first).to eq(
+        '494e50414944016463476f6f6420636f6d6d756e69636174696f6e207769746820736'+
+        '56c6c65722e204661737420746f2063726561746520696e766f6963652e204c6f6f6b'+
+        '696e6720666f727761726420746f2067657474696e67206861742e20412b2b2b20536'+
+        '56c6c6572017440653561353634643534616239646535306663366562613431373639'+
+        '393162376562386638346262656361333438326361303332633132633163303035306'+
+        '16533016308')
+      
+      data = record.data.bytes
+      
+      data = record.data.bytes
+      expect(data.shift(6).collect(&:chr).join).to eq('INPAID')
+      expect(data.shift(102).collect(&:chr).join).to eq(
+        "\x01dcGood communication with seller. Fast to create invoice. Looking"+
+        " forward to getting hat. A+++ Seller")
+      expect(data.shift(2).collect(&:chr).join).to eq("\x01t")
+      expect(data.shift(1).first).to eq(64)
+
+      # TODO: This is the problem (64 bytes): 
+      expect(data.shift(64).collect(&:chr).join).to eq(
+        "e5a564d54ab9de50fc6eba4176991b7eb8f84bbeca3482ca032c12c1c0050ae3")
+      # TODO: This is what it should be, at 32 bytes:
+      ['e5a564d54ab9de50fc6eba4176991b7eb8f84bbeca3482ca032c12c1c0050ae3'].pack('H*').length
+
+      expect(data.shift(3).collect(&:chr).join).to eq("\x01c\b")
+    end
+
   end
 end
