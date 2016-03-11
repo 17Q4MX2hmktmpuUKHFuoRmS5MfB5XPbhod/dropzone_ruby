@@ -22,7 +22,7 @@ describe Dropzone::Session do
 
   after{ clear_blockchain! }
 
-  it "simple non-deterministic chat test" do
+  it "simple non-deterministic chat test (v1/original)" do
     # Note that Der's and IV's are generated randomly on every iteration of this
     # test, which is unlike the extended test.
 
@@ -43,6 +43,31 @@ describe Dropzone::Session do
       "Hello Seller", "Hello Buyer" ])
     expect(buyer_to_seller.communications.collect(&:contents_plain)).to eq([
       "Hello Seller", "Hello Buyer" ])
+  end
+
+  it "simple non-deterministic chat test (v2)" do
+    # Note that Der's and IV's are generated randomly on every iteration of this
+    # test, which is unlike the extended test.
+
+    buyer_to_seller = Dropzone::Session.new test_privkey,
+      BUYER_SESSION_SECRET, receiver_addr: TESTER2_PUBLIC_KEY 
+
+    buyer_to_seller.authenticate!
+
+    seller_to_buyer = Dropzone::Session.new TESTER2_PRIVATE_KEY, SELLER_SESSION_SECRET,
+      with: Dropzone::Session.all(TESTER2_PUBLIC_KEY).first 
+
+    # NOTE: This is removed, and should not be necessary: seller_to_buyer.authenticate! 
+
+    seller_to_buyer << "Hello Buyer"
+    buyer_to_seller << "Hello Seller"
+    seller_to_buyer << "Hello Buyer 2"
+    buyer_to_seller << "Hello Seller 2"
+
+    expect(seller_to_buyer.communications.collect(&:contents_plain)).to eq([
+      "Hello Seller 2", "Hello Buyer 2", "Hello Seller", "Hello Buyer" ])
+    expect(buyer_to_seller.communications.collect(&:contents_plain)).to eq([
+      "Hello Seller 2", "Hello Buyer 2", "Hello Seller", "Hello Buyer" ])
   end
 
   it "extended deterministic chat test" do
@@ -150,18 +175,11 @@ describe Dropzone::Session do
       BUYER_SESSION_SECRET, receiver_addr: TESTER2_PUBLIC_KEY 
 
     expect{buyer_to_seller << "Hello Buyer"}.to raise_error(
-      Dropzone::Session::Unauthenticated )
+      Dropzone::Session::Uninitialized )
 
     buyer_to_seller.authenticate!
 
     expect{buyer_to_seller << "Hello Buyer"}.to raise_error(
-      Dropzone::Session::Unauthenticated )
-
-    seller_to_buyer = Dropzone::Session.new TESTER2_PRIVATE_KEY, SELLER_SESSION_SECRET,
-      with: Dropzone::Session.all(TESTER2_PUBLIC_KEY).first 
-
-    # This should error:
-    expect{seller_to_buyer << "Hello Buyer"}.to raise_error(
       Dropzone::Session::Unauthenticated )
   end
     

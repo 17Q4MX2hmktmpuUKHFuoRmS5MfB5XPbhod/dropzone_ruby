@@ -3,6 +3,7 @@ module Dropzone
     CIPHER_ALGORITHM = 'AES-256-CBC'
 
     class Unauthenticated < StandardError; end
+    class Uninitialized < StandardError; end
     class MissingReceiver < StandardError; end
     class InvalidWithReceiver < StandardError; end
     class DerAlreadyExists < StandardError; end
@@ -22,7 +23,9 @@ module Dropzone
           @receiver_addr = options[:receiver_addr]
         when options.has_key?(:with)
           # Existing Session:
-          raise InvalidWithReceiver unless options[:with].receiver_addr == sender_addr
+          raise InvalidWithReceiver unless [
+            options[:with].receiver_addr == sender_addr,
+            options[:with].is_init?].all?
           @with = options[:with]
           @receiver_addr = @with.sender_addr
         else
@@ -36,8 +39,11 @@ module Dropzone
     # Iv passing is supported only for the purpose of making tests completely 
     # deterministic
     def send(contents, iv = nil)
-      raise Unauthenticated unless authenticated?
- 
+      raise Uninitialized unless initialized?
+      raise Unauthenticated unless authenticated? || with
+
+      attribs = authenticated? ? {} : der_attribs
+
       # Cipher Setup:
       aes = OpenSSL::Cipher::Cipher.new CIPHER_ALGORITHM
       aes.encrypt
@@ -51,35 +57,22 @@ module Dropzone
       cipher = aes.update contents
       cipher << aes.final
 
-      communicate! contents: cipher.to_s, iv: iv
+      attribs.merge! contents: cipher.to_s, iv: iv
+
+      communicate! attribs
     end
 
     alias :<< :send
 
     def authenticate!(der = nil)
-      is_init = (communication_init.nil? || authenticated?)
-
-      # If we're already authenticated, we'll try to re-initialize. Presumably
-      # one would want to do this if they lost a secret key, or that key were
-      # somehow compromised
-      raise DerAlreadyExists unless der.nil? if !is_init
-
-      der ||= (with) ? with.der : 1024
-
-      dh = OpenSSL::PKey::DH.new der
-
-      dh.priv_key = session_key
-      dh.generate_key! 
-
-      communicate! session_pkey: [dh.pub_key.to_s(16)].pack('H*'),
-        der: (is_init) ? dh.public_key.to_der : nil
+      communicate! der_attribs(der)
     end
 
     def symm_key
       return @symm_key if @symm_key
 
       # If we can't compute, then it's ok to merely indicate this:
-      return nil unless communication_init && communication_auth
+      return nil unless initialized?
 
       dh = OpenSSL::PKey::DH.new communication_init.der
       dh.priv_key = session_key
@@ -89,8 +82,12 @@ module Dropzone
         their_pkey.session_pkey.unpack('H*').first, 16)
     end
 
+    def initialized?
+      !!communication_init
+    end
+
     def authenticated?
-      communication_init && communication_auth
+      initialized? && communication_auth
     end
 
     def communication_init
@@ -114,7 +111,7 @@ module Dropzone
     def communications
       if authenticated?
         communications = commun_messages(
-          start_block: communication_init.block_height ).reject(&:is_auth?)
+          start_block: communication_init.block_height ).reject{|m| !m.contents }
         communications.each{|c| c.symm_key = symm_key}    
         communications
       else
@@ -143,6 +140,25 @@ module Dropzone
       raise InvalidCommunication unless comm.valid?
       
       comm.save! priv_key
+    end
+
+    def der_attribs(der = nil)
+      is_init = (communication_init.nil? || authenticated?)
+
+      # If we're already authenticated, we'll try to re-initialize. Presumably
+      # one would want to do this if they lost a secret key, or that key were
+      # somehow compromised
+      raise DerAlreadyExists unless der.nil? if !is_init
+
+      der ||= (with) ? with.der : 1024
+
+      dh = OpenSSL::PKey::DH.new der
+
+      dh.priv_key = session_key
+      dh.generate_key! 
+
+      {session_pkey: [dh.pub_key.to_s(16)].pack('H*'),
+        der: (is_init) ? dh.public_key.to_der : nil}
     end
 
     class << self
