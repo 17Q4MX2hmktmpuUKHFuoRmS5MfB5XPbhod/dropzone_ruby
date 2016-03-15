@@ -114,7 +114,6 @@ describe Dropzone::Seller do
       expect(seller.errors.count).to eq(1)
       expect(seller.errors.on(:receiver_addr)).to eq(['does not match sender_addr'])
     end
-
   end
-  
+
 end

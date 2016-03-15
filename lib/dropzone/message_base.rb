@@ -25,6 +25,8 @@ module Dropzone
   class MessageBase < RecordBase
     DEFAULT_TIP = 20_000
 
+    ENCODING_VERSION_1_BLOCK = 300_000 # TODO: When should we kick this into gear?
+
     attr_reader :receiver_addr, :sender_addr, :message_type, :block_height, :txid
 
     def initialize(attrs = {})
@@ -39,6 +41,16 @@ module Dropzone
       self.blockchain.save! to_transaction, private_key
     end
 
+    # This returns the version of the current message, based on its block_height.
+    # If the block_height is omitted, it returns the 'latest' version
+    def encoding_version
+      if block_height && (block_height < ENCODING_VERSION_1_BLOCK)
+        0
+      else
+        1
+      end
+    end
+
     def to_transaction
       {receiver_addr: receiver_addr, data: data_to_hex, 
         tip: MessageBase.default_tip }
@@ -51,6 +63,13 @@ module Dropzone
             nil
           when self.class.is_attr_int?(key)
             Bitcoin::Protocol.pack_var_int(value.to_i)
+          when self.class.is_attr_binary?(key)
+            # TODO:
+            if encoding_version < 1
+              Bitcoin::Protocol.pack_var_string([value.to_s].pack('a*'))
+            else
+              Bitcoin::Protocol.pack_var_string([value.to_s].pack('H*'))
+            end
           when self.class.is_attr_pkey?(key)
             Bitcoin::Protocol.pack_var_string(
               (value == 0) ? 0.chr : 
@@ -123,6 +142,10 @@ module Dropzone
         @message_integers && @message_integers.include?(attr)
       end
 
+      def is_attr_binary?(attr)
+        @message_binaries && @message_binaries.include?(attr)
+      end
+
       def is_attr_pkey?(attr)
         @message_pkeys && @message_pkeys.include?(attr)
       end
@@ -143,6 +166,13 @@ module Dropzone
       def attr_message_int(attribs)
         @message_integers ||= []
         @message_integers += attribs.keys
+
+        attr_message attribs
+      end
+
+      def attr_message_binary(attribs)
+        @message_binaries ||= []
+        @message_binaries += attribs.keys
 
         attr_message attribs
       end

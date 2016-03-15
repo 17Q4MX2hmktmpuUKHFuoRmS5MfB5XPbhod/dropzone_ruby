@@ -5,7 +5,7 @@ class FakeBitcoinConnection
 
   DB ||= Sequel.sqlite # logger: Logger.new(STDOUT)
 
-  def initialize
+  def initialize(options = {})
     DB.create_table :transactions do
       primary_key :id
       File :data
@@ -15,7 +15,7 @@ class FakeBitcoinConnection
       Integer :block_height
     end unless DB.table_exists?(:transactions)
 
-    @height = 0
+    @height = options[:height] || 0
     @transactions = DB[:transactions]
   end
 

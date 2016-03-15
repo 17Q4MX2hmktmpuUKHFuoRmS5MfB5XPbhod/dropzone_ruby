@@ -1,6 +1,7 @@
 module Dropzone
   class Payment < MessageBase
-    attr_message d: :description, t: :invoice_txid
+    attr_message d: :description
+    attr_message_binary t: :invoice_txid
     attr_message_int q: :delivery_quality,  p: :product_quality, 
       c: :communications_quality
 

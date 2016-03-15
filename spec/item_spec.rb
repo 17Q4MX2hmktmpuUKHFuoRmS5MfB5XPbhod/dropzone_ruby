@@ -329,6 +329,14 @@ describe Dropzone::Item do
       expect(item.errors.on(:radius)).to eq(['is not a number'])
 
     end
+  end
 
+  describe "encodings" do
+    # The max specification encoded transaction ID's as hex-strings which was
+    # a poor use of space, and confusing. Nonetheless, legacy data should be
+    # supported:
+    it "decodes a v0 encoded item update" do
+      pending
+    end
   end
 end

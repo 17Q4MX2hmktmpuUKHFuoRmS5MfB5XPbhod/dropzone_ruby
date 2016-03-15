@@ -31,7 +31,8 @@ RSpec.configure do |config|
     Bitcoin.network = :testnet3
 
     # Makes testing easier:
-    Dropzone::RecordBase.blockchain = FakeBitcoinConnection.new
+    Dropzone::RecordBase.blockchain = FakeBitcoinConnection.new height: 
+      Dropzone::MessageBase::ENCODING_VERSION_1_BLOCK
   end
 end
 
