@@ -23,7 +23,7 @@ describe Dropzone::Payment do
     it "serializes to_transaction" do
       expect(Dropzone::Payment.sham!(invoice_txid: '2').to_transaction).to eq({
         tip: 20000, receiver_addr: TESTER2_PUBLIC_KEY, 
-        data: "INPAID\u0001d\u0003abc\u0001t\u00012\u0001q\b\u0001p\b\u0001c\b".force_encoding('ASCII-8BIT') })
+        data: "INPAID\u0001d\u0003abc\u0001t\u0001 \u0001q\b\u0001p\b\u0001c\b".force_encoding('ASCII-8BIT') })
     end
   end
 
@@ -159,8 +159,7 @@ describe Dropzone::Payment do
           "e5a564d54ab9de50fc6eba4176991b7eb8f84bbeca3482ca032c12c1c0050ae3"}
 
     it 'encodes v0 payments with string transaction ids' do
-      # TODO: Grab the actual block this was on:
-      block_height = Dropzone::MessageBase::ENCODING_VERSION_1_BLOCK-1
+      block_height =  389_557
 
       payment = Dropzone::Payment.new JUNSETH_PAYMENT_ATTRS.merge({
         block_height: block_height})

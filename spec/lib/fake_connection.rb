@@ -15,7 +15,7 @@ class FakeBitcoinConnection
       Integer :block_height
     end unless DB.table_exists?(:transactions)
 
-    @height = options[:height] || 0
+    @height = @starting_height = options[:height] || 0
     @transactions = DB[:transactions]
   end
 
@@ -47,7 +47,7 @@ class FakeBitcoinConnection
   # We ignore the private key in this connection. We return the database id 
   # in lieue of transaction id.
   def save!(tx, private_key)
-    transactions.insert(tx.tap{ |et| 
+    '%02d' % transactions.insert(tx.tap{ |et| 
       et[:block_height] = @height
       et[:sender_addr] = privkey_to_addr(private_key)
       et[:data] = Sequel.blob et[:data] 
@@ -57,7 +57,7 @@ class FakeBitcoinConnection
   # This aids test mode:
   def clear_transactions!
     transactions.delete
-    @height = 0
+    @height = @starting_height
   end
 
   def increment_block_height!
@@ -67,7 +67,9 @@ class FakeBitcoinConnection
   private
 
   def record_to_tx(record)
-    record.tap{|r| r[:txid] = r.delete(:id).to_s } if record
+    # Since we often encode these in bytes, and the H* is high nibble first,
+    # we need to prepend a 0 on anything under 10:
+    record.tap{|r| r[:txid] = '%02d' % r.delete(:id).to_s } if record
   end
 
   def filter_messages(messages, options = {})

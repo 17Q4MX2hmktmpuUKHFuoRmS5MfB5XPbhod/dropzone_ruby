@@ -25,11 +25,13 @@ module Dropzone
   class MessageBase < RecordBase
     DEFAULT_TIP = 20_000
 
-    ENCODING_VERSION_1_BLOCK = 300_000 # TODO: When should we kick this into gear?
+    ENCODING_VERSION_1_BLOCK = 405_000 # TODO: When should we kick this into gear?
 
     attr_reader :receiver_addr, :sender_addr, :message_type, :block_height, :txid
 
     def initialize(attrs = {})
+      # This needs to occur before the data is processed:
+      @block_height = attrs.delete(:block_height)
       data = attrs.delete(:data)
 
       attrs.merge(data_hash_from_hex(data)).each do |attr, value|
@@ -64,12 +66,12 @@ module Dropzone
           when self.class.is_attr_int?(key)
             Bitcoin::Protocol.pack_var_int(value.to_i)
           when self.class.is_attr_binary?(key)
-            # TODO:
-            if encoding_version < 1
-              Bitcoin::Protocol.pack_var_string([value.to_s].pack('a*'))
+            value_as_bin = if encoding_version < 1
+              [value.to_s].pack('a*')
             else
-              Bitcoin::Protocol.pack_var_string([value.to_s].pack('H*'))
+              [value.to_s].pack('H*')
             end
+            Bitcoin::Protocol.pack_var_string value_as_bin
           when self.class.is_attr_pkey?(key)
             Bitcoin::Protocol.pack_var_string(
               (value == 0) ? 0.chr : 
@@ -118,6 +120,10 @@ module Dropzone
         if self.class.is_attr_pkey?(short_key.to_sym) && value
           value = (value == 0.chr) ? 0 : 
             anynet_for_address(:hash160_to_address, value.unpack('H*')[0])
+        elsif self.class.is_attr_binary?(short_key.to_sym)
+          if encoding_version > 0
+            value = value.unpack('H*').first
+          end
         end
 
         full_key = self.class.message_attribs[short_key.to_sym]

@@ -36,7 +36,7 @@ describe DropZoneCommand do
     | alias      : Miracle Max                  |
     | description: First Buyer on DropZone      |
     +-------------------------------------------+
-    | Tx: 1                                     |
+    | Tx: 01                                    |
     +-------------------------------------------+
     eos
 
@@ -66,7 +66,7 @@ describe DropZoneCommand do
     | description        : First Seller on DropZone           |
     | communications_pkey: mqVRfjepJTxxoDgDt892tCybhmjfKCFNyp |
     +---------------------------------------------------------+
-    | Tx: 2                                                   |
+    | Tx: 02                                                  |
     +---------------------------------------------------------+
     eos
 
@@ -100,14 +100,14 @@ describe DropZoneCommand do
     | price_in_units: 100                         |
     | description   : Test Description            |
     +---------------------------------------------+
-    | Tx: 3                                       |
+    | Tx: 03                                      |
     +---------------------------------------------+
     eos
 
     expect{ DropZoneCommand.new(true).listing_show(
-      ['3'], {} )}.to output(to_out(<<-eos)).to_stdout
+      ['03'], {} )}.to output(to_out(<<-eos)).to_stdout
     +----------------------------------------------------+
-    | Listing: 3                                         |
+    | Listing: 03                                        |
     +----------------------------------------------------+
     | latitude      : 51.500782                          |
     | longitude     : -0.124669                          |
@@ -122,7 +122,7 @@ describe DropZoneCommand do
 
   it "updates listings" do
     expect{ DropZoneCommand.new(true).listing_update(
-      [TESTER2_PRIVATE_KEY, '3'],
+      [TESTER2_PRIVATE_KEY, '03'],
       description: "Second Description"
     )}.to output(to_out(<<-eos)).to_stdout
     +---------------------------------------------+
@@ -130,14 +130,14 @@ describe DropZoneCommand do
     +---------------------------------------------+
     | description: Second Description             |
     +---------------------------------------------+
-    | Tx: 4                                       |
+    | Tx: 04                                      |
     +---------------------------------------------+
     eos
 
     expect{ DropZoneCommand.new(true).listing_show(
-      ['3'], {} )}.to output(to_out(<<-eos)).to_stdout
+      ['03'], {} )}.to output(to_out(<<-eos)).to_stdout
     +----------------------------------------------------+
-    | Listing: 3                                         |
+    | Listing: 03                                        |
     +----------------------------------------------------+
     | latitude      : 51.500782                          |
     | longitude     : -0.124669                          |
@@ -161,7 +161,7 @@ describe DropZoneCommand do
     | amount_due   : 50000000                     |
     | expiration_in: 6                            |
     +---------------------------------------------+
-    | Tx: 5                                       |
+    | Tx: 05                                      |
     +---------------------------------------------+
     eos
 
@@ -180,7 +180,7 @@ describe DropZoneCommand do
 
   it "creates reviews" do
     expect{ DropZoneCommand.new(true).review_create(
-      [test_privkey, '5'],
+      [test_privkey, '05'],
       description: 'Fair exchange', 
       delivery_quality: 8, 
       product_quality: 8, 
@@ -193,22 +193,22 @@ describe DropZoneCommand do
     | delivery_quality      : 8                  |
     | product_quality       : 8                  |
     | communications_quality: 4                  |
-    | invoice_txid          : 5                  |
+    | invoice_txid          : 05                 |
     +--------------------------------------------+
-    | Tx: 6                                      |
+    | Tx: 06                                     |
     +--------------------------------------------+
     eos
 
     expect{ DropZoneCommand.new(true).review_show(
-      ['6'], {} )}.to output(to_out(<<-eos)).to_stdout
+      ['06'], {} )}.to output(to_out(<<-eos)).to_stdout
     +------------------------------------------------------------+
-    | Review: 6                                                  |
+    | Review: 06                                                 |
     +------------------------------------------------------------+
     | description           : Fair exchange                      |
     | delivery_quality      : 8                                  |
     | product_quality       : 8                                  |
     | communications_quality: 4                                  |
-    | invoice_txid          : 5                                  |
+    | invoice_txid          : 05                                 |
     | sender_addr           : mi37WkBomHJpUghCn7Vgh3ah33h6L9Nkqw |
     | receiver_addr         : mqVRfjepJTxxoDgDt892tCybhmjfKCFNyp |
     +------------------------------------------------------------+
@@ -220,7 +220,7 @@ describe DropZoneCommand do
       [test_privkey, TESTER2_PUBLIC_KEY], {}
     )}.to output(to_out(<<-eos)).to_stdout
     +---------------------------------------------------+
-    | Session: 7                                        |
+    | Session: 07                                       |
     +---------------------------------------------------+
     | sender_addr  : mi37WkBomHJpUghCn7Vgh3ah33h6L9Nkqw |
     | receiver_addr: mqVRfjepJTxxoDgDt892tCybhmjfKCFNyp |
@@ -231,7 +231,7 @@ describe DropZoneCommand do
       [test_privkey], {}
     )}.to output(to_out(<<-eos)).to_stdout
     +----------------------------------------------+
-    | Session: 7                                   |
+    | Session: 07                                  |
     +----------------------------------------------+
     | Address : mqVRfjepJTxxoDgDt892tCybhmjfKCFNyp |
     | Messages: 0 Unread / 0 Total                 |
@@ -242,7 +242,7 @@ describe DropZoneCommand do
       [TESTER2_PRIVATE_KEY], {}
     )}.to output(to_out(<<-eos)).to_stdout
     +----------------------------------------------+
-    | Session: 7                                   |
+    | Session: 07                                  |
     +----------------------------------------------+
     | Address : mi37WkBomHJpUghCn7Vgh3ah33h6L9Nkqw |
     | Messages: 0 Unread / 0 Total                 |
@@ -250,34 +250,34 @@ describe DropZoneCommand do
     eos
 
     expect{ DropZoneCommand.new(true).chat_say(
-      [TESTER2_PRIVATE_KEY, '7', 'Greetings Initiator'], {}
+      [TESTER2_PRIVATE_KEY, '07', 'Greetings Initiator'], {}
     )}.to output(to_out(<<-eos)).to_stdout
     +-------------------------------------------------+
-    | Chat: 9                                         |
+    | Chat: 09                                        |
     +-------------------------------------------------+
-    | Session    : 7                                  |
+    | Session    : 07                                 |
     | sender_addr: mqVRfjepJTxxoDgDt892tCybhmjfKCFNyp |
     | message    : Greetings Initiator                |
     +-------------------------------------------------+
     eos
 
     expect{ DropZoneCommand.new(true).chat_say(
-      [test_privkey, '7', 'Conversation Initiated'], {}
+      [test_privkey, '07', 'Conversation Initiated'], {}
     )}.to output(to_out(<<-eos)).to_stdout
     +-------------------------------------------------+
     | Chat: 10                                        |
     +-------------------------------------------------+
-    | Session    : 7                                  |
+    | Session    : 07                                 |
     | sender_addr: mi37WkBomHJpUghCn7Vgh3ah33h6L9Nkqw |
     | message    : Conversation Initiated             |
     +-------------------------------------------------+
     eos
 
     expect{ DropZoneCommand.new(true).chat_show(
-      [test_privkey, '7'], {}
+      [test_privkey, '07'], {}
     )}.to output(to_out(<<-eos)).to_stdout
     +------------------------------------------------------------+
-    | Chat: 7                                                    |
+    | Chat: 07                                                   |
     +------------------------------------------------------------+
     | mqVRfjepJTxxoDgDt892tCybhmjfKCFNyp: Greetings Initiator    |
     | mi37WkBomHJpUghCn7Vgh3ah33h6L9Nkqw: Conversation Initiated |
@@ -285,10 +285,10 @@ describe DropZoneCommand do
     eos
 
     expect{ DropZoneCommand.new(true).chat_show(
-      [TESTER2_PRIVATE_KEY, '7'], {}
+      [TESTER2_PRIVATE_KEY, '07'], {}
     )}.to output(to_out(<<-eos)).to_stdout
     +------------------------------------------------------------+
-    | Chat: 7                                                    |
+    | Chat: 07                                                   |
     +------------------------------------------------------------+
     | mqVRfjepJTxxoDgDt892tCybhmjfKCFNyp: Greetings Initiator    |
     | mi37WkBomHJpUghCn7Vgh3ah33h6L9Nkqw: Conversation Initiated |

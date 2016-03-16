@@ -27,7 +27,8 @@ describe Dropzone::Listing do
       expect(listing.price_currency).to eq('BTC')
       expect(listing.price_in_units).to eq(100_000_000)
       expect(listing.expiration_in).to eq(6)
-      expect(listing.expiration_at).to eq(7)
+      expect(listing.expiration_at).to eq(
+        Dropzone::MessageBase::ENCODING_VERSION_1_BLOCK+7)
       expect(listing.latitude).to eq(51.500782)
       expect(listing.longitude).to eq(-0.124669)
       expect(listing.radius).to eq(1000)
@@ -54,7 +55,8 @@ describe Dropzone::Listing do
       expect(listing.price_currency).to eq('BTC')
       expect(listing.price_in_units).to eq(99_999_999)
       expect(listing.expiration_in).to eq(12)
-      expect(listing.expiration_at).to eq(13)
+      expect(listing.expiration_at).to eq(
+        Dropzone::MessageBase::ENCODING_VERSION_1_BLOCK+13)
       expect(listing.latitude).to eq(51.500782)
       expect(listing.longitude).to eq(-0.124669)
       expect(listing.radius).to eq(1000)
