@@ -329,6 +329,69 @@ describe Dropzone::Item do
       expect(item.errors.on(:radius)).to eq(['is not a number'])
 
     end
+  end
 
+  describe "versioning" do
+    before(:each) do
+      Bitcoin.network = :bitcoin
+
+      # We need the fake blockchain on mainnet to test:
+      Dropzone::RecordBase.blockchain = FakeBitcoinConnection.new height: 
+        Dropzone::MessageBase::ENCODING_VERSION_1_BLOCK, is_testing: false
+    end
+
+    ITEM_UPDATE_ATTRS = {description: 'xyz', create_txid: 
+      'e5a564d54ab9de50fc6eba4176991b7eb8f84bbeca3482ca032c12c1c0050ae3'}
+
+    # The max specification encoded transaction ID's as hex-strings which was
+    # a poor use of space, and confusing. Nonetheless, legacy data should be
+    # supported:
+    it 'encodes v0 payments with string transaction ids' do
+      block_height = Dropzone::MessageBase::ENCODING_VERSION_1_BLOCK-1
+
+      item = Dropzone::Item.new(ITEM_UPDATE_ATTRS.merge(
+        block_height: block_height))
+
+      data = item.to_transaction[:data].bytes
+      
+      expect(data.shift(6).collect(&:chr).join).to eq('ITUPDT')
+      expect(data.shift(2).collect(&:chr).join).to eq("\x01d")
+      expect(data.shift(4).collect(&:chr).join).to eq("\x03xyz")
+      expect(data.shift(2).collect(&:chr).join).to eq("\x01t")
+      expect(data.shift(1).first).to eq(64)
+      # This was the problem (at 64 bytes instead of 32): 
+      expect(data.shift(64).collect(&:chr).join).to eq(
+        "e5a564d54ab9de50fc6eba4176991b7eb8f84bbeca3482ca032c12c1c0050ae3")
+
+      #  Now decode this payment:
+      item = Dropzone::Item.new data: item.to_transaction[:data], 
+        block_height: block_height,
+        receiver_addr: ITEM_UPDATE_ATTRS[:receiver_addr]
+      expect(item.description).to eq(ITEM_UPDATE_ATTRS[:description])
+      expect(item.create_txid).to eq(ITEM_UPDATE_ATTRS[:create_txid])
+    end
+
+    it 'encodes v1 payments with string transaction ids' do
+      item = Dropzone::Item.new(ITEM_UPDATE_ATTRS)
+
+      data = item.to_transaction[:data].bytes
+      
+      expect(data.shift(6).collect(&:chr).join).to eq('ITUPDT')
+      expect(data.shift(2).collect(&:chr).join).to eq("\x01d")
+      expect(data.shift(4).collect(&:chr).join).to eq("\x03xyz")
+      expect(data.shift(2).collect(&:chr).join).to eq("\x01t")
+      expect(data.shift(1).first).to eq(32)
+      # This was the problem (at 64 bytes instead of 32): 
+      expect(data.shift(32).collect(&:chr).join).to eq([
+        'e5a564d54ab9de50fc6eba4176991b7eb8f84bbeca3482ca032c12c1c0050ae3'
+        ].pack('H*'))
+
+      #  Now decode this payment:
+      item = Dropzone::Item.new data: item.to_transaction[:data], 
+        block_height: block_height,
+        receiver_addr: ITEM_UPDATE_ATTRS[:receiver_addr]
+      expect(item.description).to eq(ITEM_UPDATE_ATTRS[:description])
+      expect(item.create_txid).to eq(ITEM_UPDATE_ATTRS[:create_txid])
+    end
   end
 end

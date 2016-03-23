@@ -5,7 +5,7 @@ class FakeBitcoinConnection
 
   DB ||= Sequel.sqlite # logger: Logger.new(STDOUT)
 
-  def initialize
+  def initialize(options = {})
     DB.create_table :transactions do
       primary_key :id
       File :data
@@ -15,11 +15,12 @@ class FakeBitcoinConnection
       Integer :block_height
     end unless DB.table_exists?(:transactions)
 
-    @height = 0
+    @height = @starting_height = options[:height] || 0
     @transactions = DB[:transactions]
+    @is_testing = (options.has_key? :is_testing) ? options[:is_testing] : true
   end
 
-  def is_testing?; true; end
+  def is_testing?; @is_testing; end
   def privkey_to_addr(key); Bitcoin::Key.from_base58(key).addr; end
   def hash160_to_address(hash160); Bitcoin.hash160_to_address hash160; end
   def hash160_from_address(addr); Bitcoin.hash160_from_address addr; end
@@ -47,7 +48,7 @@ class FakeBitcoinConnection
   # We ignore the private key in this connection. We return the database id 
   # in lieue of transaction id.
   def save!(tx, private_key)
-    transactions.insert(tx.tap{ |et| 
+    '%02d' % transactions.insert(tx.tap{ |et| 
       et[:block_height] = @height
       et[:sender_addr] = privkey_to_addr(private_key)
       et[:data] = Sequel.blob et[:data] 
@@ -57,7 +58,7 @@ class FakeBitcoinConnection
   # This aids test mode:
   def clear_transactions!
     transactions.delete
-    @height = 0
+    @height = @starting_height
   end
 
   def increment_block_height!
@@ -67,7 +68,9 @@ class FakeBitcoinConnection
   private
 
   def record_to_tx(record)
-    record.tap{|r| r[:txid] = r.delete(:id).to_s } if record
+    # Since we often encode these in bytes, and the H* is high nibble first,
+    # we need to prepend a 0 on anything under 10:
+    record.tap{|r| r[:txid] = '%02d' % r.delete(:id).to_s } if record
   end
 
   def filter_messages(messages, options = {})

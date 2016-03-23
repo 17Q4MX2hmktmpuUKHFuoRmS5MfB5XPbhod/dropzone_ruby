@@ -4,7 +4,8 @@ module Dropzone
 
     HASH_160_PARTS = /\A(?:mfZ|1DZ)([1-9X]{9})([1-9X]{9})([1-9X]{6}).+/
 
-    attr_message d: :description, c: :price_currency, t: :create_txid
+    attr_message d: :description, c: :price_currency
+    attr_message_binary t: :create_txid
     attr_message_int p: :price_in_units, e: :expiration_in
 
     # These are receiver address attributes, not message attribs:

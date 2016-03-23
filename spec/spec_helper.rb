@@ -27,11 +27,12 @@ shared_context 'globals' do
 end
 
 RSpec.configure do |config|
-  config.before(:suite) do
+  config.before(:each) do
     Bitcoin.network = :testnet3
 
     # Makes testing easier:
-    Dropzone::RecordBase.blockchain = FakeBitcoinConnection.new
+    Dropzone::RecordBase.blockchain = FakeBitcoinConnection.new height: 
+      Dropzone::MessageBase::ENCODING_VERSION_1_BLOCK
   end
 end
 

@@ -25,9 +25,13 @@ module Dropzone
   class MessageBase < RecordBase
     DEFAULT_TIP = 20_000
 
+    ENCODING_VERSION_1_BLOCK = 405_000
+
     attr_reader :receiver_addr, :sender_addr, :message_type, :block_height, :txid
 
     def initialize(attrs = {})
+      # This needs to occur before the data is processed:
+      @block_height = attrs.delete(:block_height)
       data = attrs.delete(:data)
 
       attrs.merge(data_hash_from_hex(data)).each do |attr, value|
@@ -37,6 +41,13 @@ module Dropzone
 
     def save!(private_key)
       self.blockchain.save! to_transaction, private_key
+    end
+
+    # This returns the version of the current message, based on its block_height.
+    # If the block_height is omitted, it returns the 'latest' version
+    def encoding_version
+      ( (!self.blockchain.is_testing?) && block_height && 
+        (block_height < ENCODING_VERSION_1_BLOCK) ) ? 0 : 1
     end
 
     def to_transaction
@@ -51,6 +62,13 @@ module Dropzone
             nil
           when self.class.is_attr_int?(key)
             Bitcoin::Protocol.pack_var_int(value.to_i)
+          when self.class.is_attr_binary?(key)
+            value_as_bin = if encoding_version < 1
+              [value.to_s].pack('a*')
+            else
+              [value.to_s].pack('H*')
+            end
+            Bitcoin::Protocol.pack_var_string value_as_bin
           when self.class.is_attr_pkey?(key)
             Bitcoin::Protocol.pack_var_string(
               (value == 0) ? 0.chr : 
@@ -99,6 +117,10 @@ module Dropzone
         if self.class.is_attr_pkey?(short_key.to_sym) && value
           value = (value == 0.chr) ? 0 : 
             anynet_for_address(:hash160_to_address, value.unpack('H*')[0])
+        elsif self.class.is_attr_binary?(short_key.to_sym)
+          if encoding_version > 0
+            value = value.unpack('H*').first
+          end
         end
 
         full_key = self.class.message_attribs[short_key.to_sym]
@@ -123,6 +145,10 @@ module Dropzone
         @message_integers && @message_integers.include?(attr)
       end
 
+      def is_attr_binary?(attr)
+        @message_binaries && @message_binaries.include?(attr)
+      end
+
       def is_attr_pkey?(attr)
         @message_pkeys && @message_pkeys.include?(attr)
       end
@@ -143,6 +169,13 @@ module Dropzone
       def attr_message_int(attribs)
         @message_integers ||= []
         @message_integers += attribs.keys
+
+        attr_message attribs
+      end
+
+      def attr_message_binary(attribs)
+        @message_binaries ||= []
+        @message_binaries += attribs.keys
 
         attr_message attribs
       end

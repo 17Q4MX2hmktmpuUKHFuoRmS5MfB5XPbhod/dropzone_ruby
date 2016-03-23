@@ -21,9 +21,9 @@ describe Dropzone::Payment do
 
   describe "serialization" do 
     it "serializes to_transaction" do
-      expect(Dropzone::Payment.sham!(invoice_txid: '2').to_transaction).to eq({
+      expect(Dropzone::Payment.sham!(invoice_txid: '02').to_transaction).to eq({
         tip: 20000, receiver_addr: TESTER2_PUBLIC_KEY, 
-        data: "INPAID\u0001d\u0003abc\u0001t\u00012\u0001q\b\u0001p\b\u0001c\b".force_encoding('ASCII-8BIT') })
+        data: "INPAID\u0001d\u0003abc\u0001t\u0001\u0002\u0001q\b\u0001p\b\u0001c\b".force_encoding('ASCII-8BIT') })
     end
   end
 
@@ -147,6 +147,80 @@ describe Dropzone::Payment do
       expect(payment.errors.count).to eq(1)
       expect(payment.errors.on(:invoice_txid)).to eq(["can't be found"])
     end
+  end
 
+  describe "versioning" do
+    before(:each) do
+      Bitcoin.network = :bitcoin
+
+      # We need the fake blockchain on mainnet to test:
+      Dropzone::RecordBase.blockchain = FakeBitcoinConnection.new height: 
+        Dropzone::MessageBase::ENCODING_VERSION_1_BLOCK, is_testing: false
+    end
+
+    JUNSETH_PAYMENT_ATTRS = {communications_quality: 8,
+        receiver_addr: 'mjW8kesgoKAswSEC8dGXa7c3qVa5ixiG4M',
+        description: 
+          "Good communication with seller. Fast to create invoice. Looking "+
+          "forward to getting hat. A+++ Seller",
+        invoice_txid: 
+          "e5a564d54ab9de50fc6eba4176991b7eb8f84bbeca3482ca032c12c1c0050ae3"}
+
+    it 'encodes v0 payments with string transaction ids' do
+      block_height =  389_557
+
+      payment = Dropzone::Payment.new JUNSETH_PAYMENT_ATTRS.merge({
+        block_height: block_height})
+
+      data = payment.to_transaction[:data].bytes
+      
+      expect(data.shift(6).collect(&:chr).join).to eq('INPAID')
+      expect(data.shift(102).collect(&:chr).join).to eq(
+        "\x01dcGood communication with seller. Fast to create invoice. Looking"+
+        " forward to getting hat. A+++ Seller")
+      expect(data.shift(2).collect(&:chr).join).to eq("\x01t")
+      expect(data.shift(1).first).to eq(64)
+
+      # This was the problem (at 64 bytes instead of 32): 
+      expect(data.shift(64).collect(&:chr).join).to eq(
+        "e5a564d54ab9de50fc6eba4176991b7eb8f84bbeca3482ca032c12c1c0050ae3")
+
+      expect(data.shift(3).collect(&:chr).join).to eq("\x01c\b")
+
+      #  Now decode this payment:
+      payment = Dropzone::Payment.new data: payment.to_transaction[:data], 
+        block_height: block_height,
+        receiver_addr: JUNSETH_PAYMENT_ATTRS[:receiver_addr]
+      expect(payment.description).to eq(JUNSETH_PAYMENT_ATTRS[:description])
+      expect(payment.invoice_txid).to eq(JUNSETH_PAYMENT_ATTRS[:invoice_txid])
+      expect(payment.receiver_addr).to eq(JUNSETH_PAYMENT_ATTRS[:receiver_addr])
+    end
+
+    it 'encodes v1 payments with string transaction ids' do
+      payment = Dropzone::Payment.new JUNSETH_PAYMENT_ATTRS
+
+      data = payment.to_transaction[:data].bytes
+      
+      expect(data.shift(6).collect(&:chr).join).to eq('INPAID')
+      expect(data.shift(102).collect(&:chr).join).to eq(
+        "\x01dcGood communication with seller. Fast to create invoice. Looking"+
+        " forward to getting hat. A+++ Seller")
+      expect(data.shift(2).collect(&:chr).join).to eq("\x01t")
+      expect(data.shift(1).first).to eq(32)
+
+      # This is the more efficient format (32 bytes): 
+      expect(data.shift(32).collect(&:chr).join).to eq([
+        'e5a564d54ab9de50fc6eba4176991b7eb8f84bbeca3482ca032c12c1c0050ae3'
+        ].pack('H*'))
+
+      expect(data.shift(3).collect(&:chr).join).to eq("\x01c\b")
+      
+      #  Now decode this payment:
+      payment = Dropzone::Payment.new data: payment.to_transaction[:data], 
+        receiver_addr: JUNSETH_PAYMENT_ATTRS[:receiver_addr]
+      expect(payment.description).to eq(JUNSETH_PAYMENT_ATTRS[:description])
+      expect(payment.invoice_txid).to eq(JUNSETH_PAYMENT_ATTRS[:invoice_txid])
+      expect(payment.receiver_addr).to eq(JUNSETH_PAYMENT_ATTRS[:receiver_addr])
+    end
   end
 end
