@@ -332,6 +332,14 @@ describe Dropzone::Item do
   end
 
   describe "versioning" do
+    before(:each) do
+      Bitcoin.network = :bitcoin
+
+      # We need the fake blockchain on mainnet to test:
+      Dropzone::RecordBase.blockchain = FakeBitcoinConnection.new height: 
+        Dropzone::MessageBase::ENCODING_VERSION_1_BLOCK, is_testing: false
+    end
+
     ITEM_UPDATE_ATTRS = {description: 'xyz', create_txid: 
       'e5a564d54ab9de50fc6eba4176991b7eb8f84bbeca3482ca032c12c1c0050ae3'}
 

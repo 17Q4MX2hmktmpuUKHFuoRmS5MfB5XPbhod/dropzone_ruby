@@ -17,9 +17,10 @@ class FakeBitcoinConnection
 
     @height = @starting_height = options[:height] || 0
     @transactions = DB[:transactions]
+    @is_testing = (options.has_key? :is_testing) ? options[:is_testing] : true
   end
 
-  def is_testing?; true; end
+  def is_testing?; @is_testing; end
   def privkey_to_addr(key); Bitcoin::Key.from_base58(key).addr; end
   def hash160_to_address(hash160); Bitcoin.hash160_to_address hash160; end
   def hash160_from_address(addr); Bitcoin.hash160_from_address addr; end

@@ -150,6 +150,14 @@ describe Dropzone::Payment do
   end
 
   describe "versioning" do
+    before(:each) do
+      Bitcoin.network = :bitcoin
+
+      # We need the fake blockchain on mainnet to test:
+      Dropzone::RecordBase.blockchain = FakeBitcoinConnection.new height: 
+        Dropzone::MessageBase::ENCODING_VERSION_1_BLOCK, is_testing: false
+    end
+
     JUNSETH_PAYMENT_ATTRS = {communications_quality: 8,
         receiver_addr: 'mjW8kesgoKAswSEC8dGXa7c3qVa5ixiG4M',
         description: 

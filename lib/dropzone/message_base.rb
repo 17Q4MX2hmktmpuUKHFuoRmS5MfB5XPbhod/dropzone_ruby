@@ -25,7 +25,7 @@ module Dropzone
   class MessageBase < RecordBase
     DEFAULT_TIP = 20_000
 
-    ENCODING_VERSION_1_BLOCK = 405_000 # TODO: When should we kick this into gear?
+    ENCODING_VERSION_1_BLOCK = 405_000
 
     attr_reader :receiver_addr, :sender_addr, :message_type, :block_height, :txid
 
@@ -46,11 +46,8 @@ module Dropzone
     # This returns the version of the current message, based on its block_height.
     # If the block_height is omitted, it returns the 'latest' version
     def encoding_version
-      if block_height && (block_height < ENCODING_VERSION_1_BLOCK)
-        0
-      else
-        1
-      end
+      ( (!self.blockchain.is_testing?) && block_height && 
+        (block_height < ENCODING_VERSION_1_BLOCK) ) ? 0 : 1
     end
 
     def to_transaction
