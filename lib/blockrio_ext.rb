@@ -77,4 +77,20 @@ class BlockrIo
   def getblockinfo(hash)
     json_get('block', 'info', hash)['data']
   end
+
+  def sendrawtransaction(raw_tx)
+    # It seems as if blockr stopped relaying transactions with too many sigopps
+    # so, we'll use Blockcypher instead:
+    url = 'https://api.blockcypher.com/v1/btc/%s/txs/push' % [
+      (is_testing?) ? 'test3' : 'main']
+
+    begin
+      response = RestClient.post url, {"tx" => raw_tx}.to_json, 
+        accept: 'json', content_type: "json"
+
+      JSON.parse(response)['tx']['hash']
+    rescue => e
+      raise ResponseError.new JSON.parse(e.response)['error']
+    end
+  end
 end
