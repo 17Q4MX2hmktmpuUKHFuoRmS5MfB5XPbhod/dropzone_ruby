@@ -1,7 +1,7 @@
 #encoding: utf-8
 require_relative 'spec_helper'
 
-describe BlockCypher do
+describe SoChain do
   MUTABLE_ITEM_ID = 'bf01750dab74209fb93e51c659504bb3d155eba7301467f4304e73766881b793'
   GENESIS_ITEM_TXID = '6a9013b8684862e9ccfb527bf8f5ea5eb213e77e3970ff2cd8bbc22beb7cebfb'
   GENESIS_ITEM_DESC = ('One Bible in fair condition. Conveys the truth of the' +
@@ -22,11 +22,11 @@ describe BlockCypher do
   end
 
   let(:mainnet){ 
-    Dropzone::BitcoinConnection.new :bitcoin, :bitcoin => BlockCypher.new
+    Dropzone::BitcoinConnection.new :bitcoin, :bitcoin => SoChain.new
   }
 
   let(:testnet){ 
-    Dropzone::BitcoinConnection.new :testnet3, :bitcoin => BlockCypher.new(true)
+    Dropzone::BitcoinConnection.new :testnet3, :bitcoin => SoChain.new(true)
   }
 
   it 'fetches immutable item by id' do
@@ -102,6 +102,25 @@ describe BlockCypher do
   end
 
   it 'gets the address balance' do
-    puts BlockCypher.new.getbalance(MAX_ADDR).inspect
+    expect(SoChain.new.getbalance(MAX_ADDR)).to eq("0.28642221")
+  end
+
+  it 'gets the utxos' do
+    expect(SoChain.new.listunspent(MAX_ADDR)).to eq([ 
+      {"confirmations"=>62064, "amount"=>"0.00500000", "n"=>0,
+       "tx"=>"620254a9f73580e7c47341b7d2271f5bfdf9888db83840f2c934feb057b3b27f"}, 
+      {"confirmations"=>62058, "amount"=>"0.00103648", "n"=>0,
+       "tx"=>"2bad8be67ca4c9d92acd8cc41b241c0a3658aa1899f6b71bde7db4498c8e632f"},
+      {"confirmations"=>40128, "amount"=>"0.00005430", "n"=>0,
+       "tx"=>"3fa7a0d2d2913b15335827334e18c2980bfe86d5ef30302565569ef0b021e575"},
+      {"confirmations"=>39986, "amount"=>"0.00005430", "n"=>0,
+       "tx"=>"8442b2b772a2aad035755a92769bca097c013d2dd4785590168f4579bfca9804"}, 
+      {"confirmations"=>39983, "amount"=>"0.00005430", "n"=>0,
+       "tx"=>"5d8430ff52b93ac65b131d605cfde188c8dfb246ffff6dc8462e9c616fbec36f"}, 
+      {"confirmations"=>39983, "amount"=>"0.01838550", "n"=>2,
+       "tx"=>"5d8430ff52b93ac65b131d605cfde188c8dfb246ffff6dc8462e9c616fbec36f"}, 
+      {"confirmations"=>26567, "amount"=>"0.26183733", "n"=>0,
+       "tx"=>"9cd36b5cb5adc8b22c1aee82937c7bff71db0dff2ef94c136ca13afc6016fb1e"}
+      ])
   end
 end

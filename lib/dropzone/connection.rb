@@ -69,8 +69,11 @@ module Dropzone
     def messages_in_block(at_height, options = {})
       ret = bitcoin.getblock(at_height).collect{ |tx_h|
 
-        # This is a speed hack that drastically reduces query times:
-        next if options[:type] == 'ITCRTE' && !tx_h_create?(tx_h)
+        # This is a speed hack which keeps us from traversing through entire blocks
+        # by filtering based on the destination addresses
+        next if [ (options[:type] == 'ITCRTE'), 
+          !(Dropzone::Item::HASH_160_PARTS.match(tx_h['receiver_addr']))
+          ].all?
 
         begin
           msg = Dropzone::MessageBase.new_message_from tx_by_id( tx_h['tx'], 
@@ -211,16 +214,6 @@ module Dropzone
       end
 
       (messages) ? messages : []
-    end
-
-
-    # This is a speed hack which keeps us from traversing through entire blocks
-    # by filtering based on the destination addresses
-    def tx_h_create?(tx_h)
-      address = tx_h['out'][0]['addr'] if [ 
-        tx_h.has_key?('out'), tx_h['out'][0], tx_h['out'][0]['addr'] ].all?
-
-      (address && Dropzone::Item::HASH_160_PARTS.match(address)) ? true : false
     end
 
     # Since the Bitcoin object is a singleton, and we'll be working alongside
