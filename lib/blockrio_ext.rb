@@ -40,11 +40,11 @@ class BlockCypher
       {'tx' => tx['tx_hash'] } }
   end
 
-########################
-
   def getbalance(addr)
-    json_get('address', 'balance', addr)['data']['balance']
+    json_get('addrs', addr, 'balance')['balance']
   end
+
+########################
 
   def listunspent(addr, include_unconfirmed = false)
     query = [addr,(include_unconfirmed) ? '?unconfirmed=1' : nil ].join
@@ -110,6 +110,7 @@ class BlockCypher
       resp  = RestClient::Resource.new( [ 'https://blockchain.info', 'block-index', 
         block_hash ].join('/')+'?format=json' ).get(content_type: 'json')
 
+      # TODO: Handle 429
       raise ResponseError if resp.code != 200
 
       JSON.parse(resp)['tx'].collect do |tx, i| 
@@ -131,8 +132,15 @@ class BlockCypher
   def json_get(*path)
     request(*path) do |req| 
       begin
+        request_count = 0
         req.get :content_type => :json, :accept => :json
       rescue => e
+        # Rate limit hit:
+        if e.http_code == 429 && request_count < 3
+          request_count += 1
+          sleep 3
+          retry
+        end
         raise ResponseError.new JSON.parse(e.response)['error']
       end
     end

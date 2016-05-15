@@ -100,4 +100,8 @@ describe BlockCypher do
     expect(items[0].sender_addr).to eq(
       '17Q4MX2hmktmpuUKHFuoRmS5MfB5XPbhod')
   end
+
+  it 'gets the address balance' do
+    puts BlockCypher.new.getbalance(MAX_ADDR).inspect
+  end
 end
