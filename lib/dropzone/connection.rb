@@ -131,9 +131,7 @@ module Dropzone
         tx_h = bitcoin.getrawtransaction(id)
         tx = Bitcoin::P::Tx.new [tx_h['hex']].pack('H*')
     
-        if tx_h.has_key? 'blockhash'
-          options[:block_height] = bitcoin.getblockinfo(tx_h['blockhash'])['nb']
-        end
+        options[:block_height] = tx_h['block_height']
 
         record = Counterparty::TxDecode.new tx,
           prefix: Dropzone::BitcoinConnection::PREFIX

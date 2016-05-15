@@ -1,7 +1,7 @@
 #encoding: utf-8
 require_relative 'spec_helper'
 
-describe BlockrIo do
+describe BlockCypher do
   MUTABLE_ITEM_ID = 'bf01750dab74209fb93e51c659504bb3d155eba7301467f4304e73766881b793'
   GENESIS_ITEM_TXID = '6a9013b8684862e9ccfb527bf8f5ea5eb213e77e3970ff2cd8bbc22beb7cebfb'
   GENESIS_ITEM_DESC = ('One Bible in fair condition. Conveys the truth of the' +
@@ -22,11 +22,11 @@ describe BlockrIo do
   end
 
   let(:mainnet){ 
-    Dropzone::BitcoinConnection.new :bitcoin
+    Dropzone::BitcoinConnection.new :bitcoin, :bitcoin => BlockCypher.new
   }
 
   let(:testnet){ 
-    Dropzone::BitcoinConnection.new :testnet3
+    Dropzone::BitcoinConnection.new :testnet3, :bitcoin => BlockCypher.new(true)
   }
 
   it 'fetches immutable item by id' do

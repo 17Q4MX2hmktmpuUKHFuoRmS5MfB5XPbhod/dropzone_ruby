@@ -1,25 +1,76 @@
 require 'time' 
 
-class BlockrIo
-  # NOTE: The blockr Api only shows the most recent 200 transactions on an 
+class BlockCypher
+  class ResponseError < StandardError; end
+
+  def initialize(is_testing = false)
+    @is_testing = is_testing
+  end
+
+  def is_testing?
+    @is_testing
+  end
+
+  def api_url
+    'https://api.blockcypher.com/v1/btc/%s' % [(is_testing?) ? 'test3' : 'main']
+  end
+
+  def getrawtransaction(tx_id)
+    Hash[ json_get('txs',  [tx_id.to_s, '?includeHex=1'].join).find_all{|k, v| 
+      %w(hex block_height).include? k } ]
+  end
+
+  def getblockinfo(hash)
+    puts 'TODO' if hash == 'last'
+
+    Hash[ json_get('blocks', hash).find_all{|k,v| %w(hash height).include? k} ]
+  end
+
+  # NOTE: The blockcypher Api only shows the most recent 2000 transactions on an 
   # address. Either this method should use the non-API query mode, or an 
   # alternate API driver will be needed to properly support this method.
   #
   # Additionally, this api call returns the block times, but not the relay times
   # A better api would sort these by relay times.
   def listtransactions(addr, include_unconfirmed = false)
-    # Confirmed Transactions:
-    ret = json_get('address', 'txs', addr)['data']['txs'].sort_by{|t| 
-      t['confirmations'] }
+    params = ['addrs', [addr, 
+      '?limit=2000&confirmations=%d', (include_unconfirmed) ? 0 : 1].join]
 
-    if include_unconfirmed
-      unconfirmed = json_get('address', 'unconfirmed', addr)['data']['unconfirmed']
-      # We don't need every output listed, just the tx:
-      unconfirmed.uniq!{|tx_h| tx_h['tx']}
-      ret.unshift(*unconfirmed.sort_by{|t| Time.parse t['time_utc']}.reverse)
+    json_get(*params)['txrefs'].sort_by{|t| t['confirmations'] }.collect{|tx|
+      {'tx' => tx['tx_hash'] } }
+  end
+
+########################
+
+  def getbalance(addr)
+    json_get('address', 'balance', addr)['data']['balance']
+  end
+
+  def listunspent(addr, include_unconfirmed = false)
+    query = [addr,(include_unconfirmed) ? '?unconfirmed=1' : nil ].join
+    json_get('address', 'unspent', query)['data']['unspent']
+  end
+
+  # Shows all the transactions that are unconfirmed for the provided address:
+  def listunconfirmed(addr)
+    json_get('address','unconfirmed',addr)['data']['unconfirmed']
+  end
+
+  def sendrawtransaction(raw_tx)
+    # It seems as if blockr stopped relaying transactions with too many sigopps
+    # so, we'll use Blockcypher instead:
+    # TODO: use the getaddress or req for this...
+    url = 'https://api.blockcypher.com/v1/btc/%s/txs/push' % [
+      (is_testing?) ? 'test3' : 'main']
+
+    begin
+      response = RestClient.post url, {"tx" => raw_tx}.to_json, 
+        accept: 'json', content_type: "json"
+
+      JSON.parse(response)['tx']['hash']
+    rescue => e
+      raise ResponseError.new JSON.parse(e.response)['error']
     end
-
-    ret
   end
 
   # The blockr.io block/txs method appears to omit some transactions. As such, 
@@ -53,6 +104,7 @@ class BlockrIo
       end
     else
       # We use blockchain.info for mainnet, per the max implementation:
+      # TODO: Let's move this over?
       block_hash = getblockinfo(number)['hash']
 
       resp  = RestClient::Resource.new( [ 'https://blockchain.info', 'block-index', 
@@ -65,32 +117,24 @@ class BlockrIo
       end
     end
   end
+  
+  private 
 
-  def getbalance(addr)
-    json_get('address', 'balance', addr)['data']['balance']
+  def request(*path, &block)
+    JSON.parse(block.call(client(*path)))
   end
 
-  def getrawtransaction(tx_id)
-    json_get('tx', 'raw', tx_id.to_s)['data']['tx']
+  def client(*path_parts)
+    RestClient::Resource.new( ([api_url]+path_parts).join('/') )
   end
 
-  def getblockinfo(hash)
-    json_get('block', 'info', hash)['data']
-  end
-
-  def sendrawtransaction(raw_tx)
-    # It seems as if blockr stopped relaying transactions with too many sigopps
-    # so, we'll use Blockcypher instead:
-    url = 'https://api.blockcypher.com/v1/btc/%s/txs/push' % [
-      (is_testing?) ? 'test3' : 'main']
-
-    begin
-      response = RestClient.post url, {"tx" => raw_tx}.to_json, 
-        accept: 'json', content_type: "json"
-
-      JSON.parse(response)['tx']['hash']
-    rescue => e
-      raise ResponseError.new JSON.parse(e.response)['error']
+  def json_get(*path)
+    request(*path) do |req| 
+      begin
+        req.get :content_type => :json, :accept => :json
+      rescue => e
+        raise ResponseError.new JSON.parse(e.response)['error']
+      end
     end
   end
 end
