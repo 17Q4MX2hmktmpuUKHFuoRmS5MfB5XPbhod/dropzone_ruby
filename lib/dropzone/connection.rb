@@ -251,25 +251,8 @@ module Dropzone
     def allocate_inputs_for(addr, amount)
       allocated = 0
 
-      # NOTE: I think we're issuing more queries here than we should be due to a
-      # fetch for every utxo, instead of one fetch for every transaction. 
-      # (Which may have many utxo's per transaction.)
-      mempooled_utxos = bitcoin.listunconfirmed(addr).collect{|tx|
-        # Note that some api's may not retrieve the contents of an unconfirmed
-        # raw transaction.
-        unconfirmed_tx = bitcoin.getrawtransaction(tx['tx'])['hex']
-
-        if unconfirmed_tx
-          tx = Bitcoin::P::Tx.new [unconfirmed_tx].pack('H*')
-          tx.inputs.collect{|input| input.prev_out.reverse.unpack('H*').first}
-        else
-          nil
-        end
-      }.compact.flatten.uniq
-
       utxos = []
       bitcoin.listunspent(addr).sort_by{|utxo| utxo['confirmations']}.each{|utxo|
-        next if mempooled_utxos.include? utxo['tx'] 
         utxos << utxo
         allocated += to_satoshis(utxo['amount'])
         break if allocated >= amount

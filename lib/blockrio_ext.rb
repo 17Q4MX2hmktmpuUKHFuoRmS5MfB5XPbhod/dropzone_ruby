@@ -63,11 +63,6 @@ class SoChain
   
 #####
 
-  # Shows all the transactions that are unconfirmed for the provided address:
-  def listunconfirmed(addr)
-    json_get('address','unconfirmed',addr)['data']['unconfirmed']
-  end
-
   def sendrawtransaction(raw_tx)
     # It seems as if blockr stopped relaying transactions with too many sigopps
     # so, we'll use Blockcypher instead:
@@ -92,7 +87,6 @@ class SoChain
   end
 
   def client(*path_parts)
-    puts ([api_url]+path_parts).join('/').inspect
     RestClient::Resource.new( ([api_url]+path_parts).join('/') )
   end
 
