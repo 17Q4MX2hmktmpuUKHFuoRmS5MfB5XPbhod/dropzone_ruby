@@ -14,7 +14,7 @@ module Dropzone
       @network = network
       @bitcoin = options[:bitcoin] if options.has_key? :bitcoin
       @is_testing = (/\Atestnet/.match network.to_s) ? true : false
-      @bitcoin ||= BlockrIo.new is_testing?
+      @bitcoin ||= SoChain.new is_testing?
     end
 
     def is_testing?; @is_testing; end

@@ -61,20 +61,29 @@ class SoChain
     end
   end
   
-#####
-
   def sendrawtransaction(raw_tx)
-    # It seems as if blockr stopped relaying transactions with too many sigopps
-    # so, we'll use Blockcypher instead:
-    # TODO: use the getaddress or req for this...
-    url = 'https://api.blockcypher.com/v1/btc/%s/txs/push' % [
-      (is_testing?) ? 'test3' : 'main']
+    # This issue is screwing us up at the moment: 
+    # https://github.com/bitcoin/bitcoin/issues/8079
+    #
+    # so, we'll use Blockcypher instead, as they're using an older bitcoind
+    # (sloppy, but let's see what happens in this issue)
 
     begin
+      # So Chain:
+      # url = [api_url, 'send_tx', chainnet].join '/'
+      # response = RestClient.post url, {"tx_hex" => raw_tx}.to_json, 
+      #   accept: 'json', content_type: "json"
+      # JSON.parse(response)['data']['txid']
+
+      # BlockCypher
+      url = 'https://api.blockcypher.com/v1/btc/%s/txs/push' % [
+        (is_testing?) ? 'test3' : 'main']
+
       response = RestClient.post url, {"tx" => raw_tx}.to_json, 
-        accept: 'json', content_type: "json"
+        accept: 'json', content_type: "json"                    
 
       JSON.parse(response)['tx']['hash']
+
     rescue => e
       raise ResponseError.new JSON.parse(e.response)['error']
     end
