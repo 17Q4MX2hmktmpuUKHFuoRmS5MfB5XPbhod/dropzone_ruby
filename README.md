@@ -29,8 +29,9 @@ Fund a testnet key with tBTC or a mainnet key with BTC
 
 Create a seller or buyer profile
 
-## Author's Manifesto
 ![Drop Zone](dropzone-screenshot.jpg)
+
+## Author's Manifesto
 
 To whom it may concern,
 
