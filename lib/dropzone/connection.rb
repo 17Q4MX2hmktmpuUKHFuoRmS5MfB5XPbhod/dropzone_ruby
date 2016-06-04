@@ -1,6 +1,7 @@
 module Dropzone
   class BitcoinConnection
     class WalletFundsTooLowOrNoUTXOs < StandardError; end
+    class UnableToRelay < StandardError; end
 
     SATOSHIS_IN_BTC = 100_000_000
 
@@ -14,7 +15,7 @@ module Dropzone
       @network = network
       @bitcoin = options[:bitcoin] if options.has_key? :bitcoin
       @is_testing = (/\Atestnet/.match network.to_s) ? true : false
-      @bitcoin ||= BlockrIo.new is_testing?
+      @bitcoin ||= SoChain.new is_testing?
     end
 
     def is_testing?; @is_testing; end
@@ -69,8 +70,11 @@ module Dropzone
     def messages_in_block(at_height, options = {})
       ret = bitcoin.getblock(at_height).collect{ |tx_h|
 
-        # This is a speed hack that drastically reduces query times:
-        next if options[:type] == 'ITCRTE' && !tx_h_create?(tx_h)
+        # This is a speed hack which keeps us from traversing through entire blocks
+        # by filtering based on the destination addresses
+        next if [ (options[:type] == 'ITCRTE'), 
+          !(Dropzone::Item::HASH_160_PARTS.match(tx_h['receiver_addr']))
+          ].all?
 
         begin
           msg = Dropzone::MessageBase.new_message_from tx_by_id( tx_h['tx'], 
@@ -100,7 +104,8 @@ module Dropzone
         end
       }
 
-      sign_and_send new_tx, from_key
+      bitcoin.sendrawtransaction(
+        sign_tx(new_tx, from_key).to_payload.unpack('H*')[0])
     end
 
     def sign_tx(tx, key)
@@ -131,9 +136,7 @@ module Dropzone
         tx_h = bitcoin.getrawtransaction(id)
         tx = Bitcoin::P::Tx.new [tx_h['hex']].pack('H*')
     
-        if tx_h.has_key? 'blockhash'
-          options[:block_height] = bitcoin.getblockinfo(tx_h['blockhash'])['nb']
-        end
+        options[:block_height] = tx_h['block_height']
 
         record = Counterparty::TxDecode.new tx,
           prefix: Dropzone::BitcoinConnection::PREFIX
@@ -155,15 +158,36 @@ module Dropzone
 
     def save!(data, private_key_wif)
       set_network_mode!
-
       from_key = Bitcoin::Key.from_base58 private_key_wif
-      
+
+      # Bare multi-sig is prefferred, but sometimes unavailable:
+      tx = data_to_tx data, from_key, :to_opmultisig
+     
+      # Well, PubkeyHash it is:
+      unless TransactionValidator.new(tx, bitcoin).is_relayable?
+        tx = data_to_tx data, from_key, :to_pubkeyhash
+        
+        raise UnableToRelay unless TransactionValidator.new(tx, bitcoin).is_relayable?
+      end
+
+      bitcoin.sendrawtransaction(tx.to_payload.unpack('H*')[0])
+    end
+
+    def block_height
+      bitcoin.getblockinfo('last')['nb']
+    end
+
+    private
+
+    def data_to_tx(data, from_key, mechanism = :to_opmultisig)
       # We need to know how many transactions we'll have in order to know how
       # many satoshi's to allocate. We start with 1, since that's the return
       # address of the allocated input satoshis
       data_outputs_needed = 1
 
-      bytes_in_output = Counterparty::TxEncode::BYTES_IN_MULTISIG
+      bytes_in_output = (mechanism == :to_opmultisig) ? 
+        Counterparty::TxEncode::BYTES_IN_MULTISIG :
+        Counterparty::TxEncode::BYTES_IN_PUBKEYHASH
 
       # 3 is for the two-byte DZ prefix, and the 1-byte length
       data_outputs_needed += ((data[:data].length+3) / bytes_in_output).ceil
@@ -172,11 +196,12 @@ module Dropzone
       data_outputs_needed += 1 if data.has_key? :receiver_addr
       tip = data[:tip] || 0
 
-      new_tx = create_tx(from_key,data_outputs_needed * TXO_DUST+tip) do |tx, amount_allocated|
+      allocate = data_outputs_needed * TXO_DUST+tip
+      new_tx = create_tx(from_key,allocate) do |tx, amount_allocated|
         outputs = Counterparty::TxEncode.new( 
           [tx.inputs[0].prev_out.reverse_hth].pack('H*'),
           data[:data], receiver_addr: data[:receiver_addr],
-          sender_pubkey: from_key.pub, prefix: PREFIX).to_opmultisig
+          sender_pubkey: from_key.pub, prefix: PREFIX).send(mechanism)
 
         outputs.each_with_index do |output,i|
           tx.add_out Bitcoin::P::TxOut.new( (i == (outputs.length-1)) ? 
@@ -185,14 +210,8 @@ module Dropzone
         end
       end
 
-      sign_and_send new_tx, from_key
+      signed_tx = sign_tx new_tx, from_key
     end
-
-    def block_height
-      bitcoin.getblockinfo('last')['nb']
-    end
-
-    private
 
     def filter_messages(messages, options = {})
       messages = messages.find_all{|msg| 
@@ -213,16 +232,6 @@ module Dropzone
       end
 
       (messages) ? messages : []
-    end
-
-
-    # This is a speed hack which keeps us from traversing through entire blocks
-    # by filtering based on the destination addresses
-    def tx_h_create?(tx_h)
-      address = tx_h['out'][0]['addr'] if [ 
-        tx_h.has_key?('out'), tx_h['out'][0], tx_h['out'][0]['addr'] ].all?
-
-      (address && Dropzone::Item::HASH_160_PARTS.match(address)) ? true : false
     end
 
     # Since the Bitcoin object is a singleton, and we'll be working alongside
@@ -260,25 +269,8 @@ module Dropzone
     def allocate_inputs_for(addr, amount)
       allocated = 0
 
-      # NOTE: I think we're issuing more queries here than we should be due to a
-      # fetch for every utxo, instead of one fetch for every transaction. 
-      # (Which may have many utxo's per transaction.)
-      mempooled_utxos = bitcoin.listunconfirmed(addr).collect{|tx|
-        # Note that some api's may not retrieve the contents of an unconfirmed
-        # raw transaction.
-        unconfirmed_tx = bitcoin.getrawtransaction(tx['tx'])['hex']
-
-        if unconfirmed_tx
-          tx = Bitcoin::P::Tx.new [unconfirmed_tx].pack('H*')
-          tx.inputs.collect{|input| input.prev_out.reverse.unpack('H*').first}
-        else
-          nil
-        end
-      }.compact.flatten.uniq
-
       utxos = []
       bitcoin.listunspent(addr).sort_by{|utxo| utxo['confirmations']}.each{|utxo|
-        next if mempooled_utxos.include? utxo['tx'] 
         utxos << utxo
         allocated += to_satoshis(utxo['amount'])
         break if allocated >= amount
