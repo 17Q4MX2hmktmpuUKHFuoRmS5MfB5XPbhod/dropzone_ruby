@@ -62,27 +62,12 @@ class SoChain
   end
   
   def sendrawtransaction(raw_tx)
-    # This issue is screwing us up at the moment: 
-    # https://github.com/bitcoin/bitcoin/issues/8079
-    #
-    # so, we'll use Blockcypher instead, as they're using an older bitcoind
-    # (sloppy, but let's see what happens in this issue)
-
     begin
       # So Chain:
-      # url = [api_url, 'send_tx', chainnet].join '/'
-      # response = RestClient.post url, {"tx_hex" => raw_tx}.to_json, 
-      #   accept: 'json', content_type: "json"
-      # JSON.parse(response)['data']['txid']
-
-      # BlockCypher
-      url = 'https://api.blockcypher.com/v1/btc/%s/txs/push' % [
-        (is_testing?) ? 'test3' : 'main']
-
-      response = RestClient.post url, {"tx" => raw_tx}.to_json, 
-        accept: 'json', content_type: "json"                    
-
-      JSON.parse(response)['tx']['hash']
+      url = [api_url, 'send_tx', chainnet].join '/'
+      response = RestClient.post url, {"tx_hex" => raw_tx}.to_json, 
+        accept: 'json', content_type: "json"
+      JSON.parse(response)['data']['txid']
 
     rescue => e
       raise ResponseError.new JSON.parse(e.response)['error']
@@ -106,9 +91,9 @@ class SoChain
         req.get :content_type => :json, :accept => :json
       rescue => e
         # Rate limit hit:
-        if e.http_code == 429 && request_count < 3
+        if e.http_code == 429 && request_count < 4
           request_count += 1
-          sleep 11
+          sleep 12
           retry
         end
         raise ResponseError.new JSON.parse(e.response)['error']
